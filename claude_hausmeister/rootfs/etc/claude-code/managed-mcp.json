@@ -3,11 +3,11 @@
     "homeassistant": {
       "type": "stdio",
       "command": "/usr/local/bin/node",
-      "args": ["/opt/ha-mcp/dist/stdio.js"],
+      "args": ["/opt/agent-mcp/homeassistant.mjs"],
       "env": {
-        "HA_MCP_URL": "${HA_URL}",
-        "HA_MCP_TOKEN": "${HA_TOKEN}",
-        "HA_MCP_TZ": "${TZ:-Europe/Berlin}"
+        "HA_URL": "${HA_URL}",
+        "HA_TOKEN": "${HA_TOKEN}",
+        "HA_FILES_DIR": "/data/workspace/ha"
       }
     }
   }

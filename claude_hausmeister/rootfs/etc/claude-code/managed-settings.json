@@ -13,7 +13,15 @@
       "Edit(//home/**)",
       "Edit(//data/workspace/.claude/**)",
       "Edit(//data/workspace/.mcp.json)",
-      "Edit(//data/workspace/CLAUDE.md)"
+      "Edit(//data/workspace/CLAUDE.md)",
+      "Edit(//data/workspace/ha/backup/**)"
+    ],
+    "ask": [
+      "mcp__homeassistant__ha_write"
+    ],
+    "allow": [
+      "mcp__homeassistant__ha_read",
+      "Edit(//data/workspace/ha/**)"
     ],
     "disableBypassPermissionsMode": "disable"
   },

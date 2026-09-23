@@ -9,7 +9,8 @@ Ergaenzt `uebergabe.md`. Hier steht, was gebaut ist und wo es vom Entwurf abweic
    (Login), Lesen von `/proc`, Schreiben in `/etc`, `/opt`, `/usr`, `/home` sowie in die
    Workspace-Konfiguration. Dazu `disableBypassPermissionsMode` und `allowManagedHooksOnly`.
 2. **Managed MCP** `/etc/claude-code/managed-mcp.json`: exklusive Liste der MCP-Server.
-   Eine `.mcp.json` im Projekt wird ignoriert.
+   Eine `.mcp.json` im Projekt wird ignoriert. Hausmeister: eigener Server
+   `opt/agent-mcp/homeassistant.mjs` (ab 0.2.0) mit `ha_read` (allow) und `ha_write` (ask, erzwungen).
 3. **Workspace root-eigen** (`1775`, Sticky-Bit): Der Agent kann Notizen anlegen, aber
    `.claude/`, `CLAUDE.md` und `.mcp.json` nicht anlegen, aendern oder umbenennen.
    *Grund:* Projekt-Settings koennen Befehle ausfuehren (Hooks, `statusLine`, `env` →
@@ -55,6 +56,22 @@ WebSocket-Ziel fuer ha-mcp, Dauerbetrieb ohne TTY, Ingress mit ttyd, benoetigte 
 - Remote Control laeuft ohne TTY (`pty: false`). RAM mit laufendem Server: ca. 280 MB.
 - Abnahme 1, 3, 4 bestanden (Sitzung in der App, Bash/Web verweigert, sun.sun per ha-mcp
   ueber `http://supervisor/core`).
+
+## HA-Schreibzugriff (0.2.0) – Risiken und Gegenmassnahmen
+
+Weg: Supervisor-Proxy `http://supervisor/core` mit dem Supervisor-Token (HA-Admin). Keine
+Firewall-Freigabe fuer `homeassistant.fritz.box:8123` noetig, kein eigener Token im Container.
+
+| Risiko | Gegenmassnahme |
+|---|---|
+| Prompt Injection ueber Entitaetszustaende aus fremden Quellen (Kalender, Mail-Sensoren, Geraetenamen, Wettertexte) | `ha_write` immer mit Freigabe; Rollenregeln in CLAUDE.md |
+| HA als Weg nach aussen (notify, rest_command, Mail) – Bein 3 des Dreigespanns | Freigabe; HA-Daten sind nur maessig sensibel (Praesenz!) |
+| Dauerhafte Wirkung: Automationen laufen spaeter ohne Aufsicht | Freigabe mit Diff-Workflow; Sicherungen unter `ha/backup/` |
+| Rechteausweitung ueber HA (Tokens/Benutzer anlegen, Integrationen, Add-ons, Backups) | Sperrliste im MCP-Server, auch in Automations-/Skript-Inhalten (`hassio.*`, `backup.*`) |
+| Kaputte Dashboards/Automationen | automatische Sicherung vor jedem Speichern |
+
+Grenzen: Die Sperrliste ist eine Schutzschicht gegen Fehler und Injection, keine harte Grenze –
+ein HA-Admin kann vieles indirekt. Die tragende Schicht ist die Freigabe durch Markus.
 
 ## Abnahme Stufe 1 (Plan 1.5, auf HAOS uebertragen)
 

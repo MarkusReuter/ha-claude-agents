@@ -1,9 +1,9 @@
 # Claude Hausmeister
 
 Claude Code laeuft als Remote-Control-Server im Add-on und ist ueber die Claude-App erreichbar
-(Konto: privates **Pro**-Abo). Der Agent sieht Home Assistant nur ueber das MCP-Werkzeug
-`homeassistant` (ha-mcp: Zustaende lesen, Services aufrufen, Events). Shell, Web-Abruf und
-Websuche sind gesperrt.
+(Konto: privates **Pro**-Abo). Der Agent sieht Home Assistant nur ueber den eingebauten
+MCP-Server `homeassistant` mit den Werkzeugen `ha_read` und `ha_write` (Zustaende, Dashboards,
+Automationen, Helfer, Services). Shell, Web-Abruf und Websuche sind gesperrt.
 
 ## Einrichten (einmalig)
 
@@ -34,8 +34,14 @@ Add-on-Log beim Start.
 
 ## Freigaben
 
-Jeder Aufruf des Werkzeugs `homeassistant` fragt in der App nach einer Freigabe (Lesen
-und Schalten laufen ueber dasselbe Werkzeug). „Immer erlauben“ gibt damit auch das Schalten frei.
+- `ha_read` (nur lesen) laeuft ohne Rueckfrage.
+- `ha_write` fragt **jedes Mal** – das ist in den Managed Settings fest eingestellt und laesst
+  sich in der App nicht auf „immer erlauben“ stellen. Vor dem Freigeben lesen, was geaendert wird.
+- Vor Aenderungen an Dashboards, Automationen, Skripten und Szenen legt `ha_write` den alten
+  Stand unter `/data/workspace/ha/backup/` ab. Zuruecksetzen: den Hausmeister bitten, die
+  Sicherung zurueckzuschreiben.
+- Gesperrt, auch mit Freigabe: Benutzer/Anmeldung, Integrationen hinzufuegen/entfernen,
+  Supervisor/Add-ons, Backups, Services `hassio.*` und `backup.*`.
 
 ## Firewall auswerten (learn → enforce)
 

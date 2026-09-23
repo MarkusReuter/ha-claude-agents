@@ -1,7 +1,5 @@
-# Rollen-MCP: ha-mcp (Node) – fest gepinnt, damit zur Laufzeit kein npm-Registry-Zugriff noetig ist
-FROM node:22-trixie-slim AS mcp
-ARG HA_MCP_VERSION=0.1.6
-RUN npm install -g --omit=dev "ha-mcp@${HA_MCP_VERSION}" && npm cache clean --force
+# Nur das Node-Binary fuer den eigenen MCP-Server (rootfs/opt/agent-mcp, ohne npm-Abhaengigkeiten)
+FROM node:22-trixie-slim AS node
 
 FROM debian:trixie-slim
 
@@ -28,14 +26,13 @@ RUN curl -fsSL -o /usr/local/bin/ttyd \
  && echo "${TTYD_SHA256}  /usr/local/bin/ttyd" | sha256sum -c - \
  && chmod 0755 /usr/local/bin/ttyd
 
-COPY --from=mcp /usr/local/bin/node /usr/local/bin/node
-COPY --from=mcp /usr/local/lib/node_modules/ha-mcp /opt/ha-mcp
+COPY --from=node /usr/local/bin/node /usr/local/bin/node
 
 # Unprivilegierter Nutzer fuer den Agenten
 RUN useradd --create-home --uid 1000 --user-group --shell /bin/bash agent
 
 COPY rootfs/ /
 RUN chmod 0755 /run.sh /usr/local/bin/* \
- && chmod 0644 /etc/claude-code/*.json /usr/local/lib/agent-common.sh /opt/agent/*
+ && chmod 0644 /etc/claude-code/*.json /usr/local/lib/agent-common.sh /opt/agent/* /opt/agent-mcp/*
 
 CMD ["/run.sh"]

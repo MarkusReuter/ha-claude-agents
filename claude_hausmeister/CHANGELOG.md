@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.0
+- ha-mcp ersetzt durch eigenen MCP-Server `rootfs/opt/agent-mcp/homeassistant.mjs` (ohne Abhaengigkeiten)
+  - `ha_read`: WebSocket-Befehle aus einer Lese-Liste und REST-GET, ohne Rueckfrage
+  - `ha_write`: Dashboards, Automationen, Helfer, Entity-Registry, Services – immer mit Rueckfrage,
+    vorher automatische Sicherung unter `ha/backup/`
+  - gesperrt: Auth, Integrationen, Supervisor/Add-ons, Backups, Services `hassio.*`/`backup.*`
+  - grosse Antworten und Arbeitskopien als Dateien unter `/data/workspace/ha/`
+- Rollenbeschreibung (CLAUDE.md) mit HA-Arbeitsweise
+
 ## 0.1.1
 - Einrichtung wiederholt Schritt 1, bis Ordner-Vertrauen und Login gespeichert sind; Statuszeile
 - Claude Code fest auf 2.1.273 gepinnt (bisher Kanal `stable`)

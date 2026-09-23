@@ -1,5 +1,5 @@
 name: Claude Hausmeister
-version: "0.1.1"
+version: "0.2.0"
 slug: claude_hausmeister
 description: Claude-Code-Agent "Hausmeister" – Home Assistant per Remote Control aus der Claude-App
 url: https://github.com/MarkusReuter/ha-claude-agents
@@ -8,7 +8,7 @@ arch:
 startup: application
 boot: auto
 stdin: false
-# Hausmeister darf HA Core ansprechen (ha-mcp ueber http://supervisor/core), nicht den Supervisor
+# Hausmeister darf HA Core ansprechen (eigener MCP ueber http://supervisor/core, Admin-Rechte), nicht den Supervisor
 homeassistant_api: true
 hassio_api: false
 auth_api: false

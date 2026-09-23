@@ -14,6 +14,8 @@ USE_PTY=$(opt pty false)
 install -d -o agent -g agent -m 0700 "$CONFIG_DIR"
 install -d -o root  -g agent -m 1775 "$WORKSPACE"
 install -d -o root  -g root  -m 0755 "$WORKSPACE/.claude"
+# Arbeitsdateien des MCP-Servers (Abrufe, bearbeitete Konfigurationen, automatische Sicherungen)
+install -d -o agent -g agent -m 0755 "$WORKSPACE/ha" "$WORKSPACE/ha/backup"
 install -o root -g root -m 0644 /opt/agent/CLAUDE.md "$WORKSPACE/CLAUDE.md"
 echo '{"mcpServers":{}}' > "$WORKSPACE/.mcp.json"; chown root:root "$WORKSPACE/.mcp.json"; chmod 0644 "$WORKSPACE/.mcp.json"
 
