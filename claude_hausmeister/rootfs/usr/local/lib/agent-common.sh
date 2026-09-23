@@ -23,7 +23,7 @@ as_agent() {
               PATH=/usr/local/bin:/usr/bin:/bin LANG=C.UTF-8 TERM="${TERM:-xterm-256color}"
               TZ="${TZ:-Europe/Berlin}" CLAUDE_CONFIG_DIR="$CONFIG_DIR" DISABLE_AUTOUPDATER=1
               ROLE="$ROLE" SESSION_NAME="$SESSION_NAME" SETUP_MARKER="$SETUP_MARKER"
-              WORKSPACE="$WORKSPACE")
+              WORKSPACE="$WORKSPACE" HA_WRITE="${HA_WRITE:-0}")
   if [[ -n "$HA_TOKEN" ]]; then envs+=(HA_URL=http://supervisor/core HA_TOKEN="$HA_TOKEN"); fi
   setpriv --reuid=1000 --regid=1000 --clear-groups \
           --inh-caps=-all --bounding-set=-all --no-new-privs \

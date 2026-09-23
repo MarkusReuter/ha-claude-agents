@@ -7,6 +7,9 @@ configuration:
   setup_terminal:
     name: Setup terminal
     description: Web terminal (Web UI) for login and tests. Turn off after setup.
+  ha_write:
+    name: Write access to Home Assistant
+    description: Allow changes (each needs approval). Off = read only. Takes effect after restart.
   pty:
     name: Pseudo terminal
     description: Run the Remote Control server inside a pseudo terminal. Only if it fails without one.

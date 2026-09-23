@@ -33,6 +33,6 @@ RUN useradd --create-home --uid 1000 --user-group --shell /bin/bash agent
 
 COPY rootfs/ /
 RUN chmod 0755 /run.sh /usr/local/bin/* \
- && chmod 0644 /etc/claude-code/*.json /usr/local/lib/agent-common.sh /opt/agent/* /opt/agent-mcp/*
+ && chmod 0644 /etc/claude-code/managed-mcp.json /usr/local/lib/agent-common.sh /opt/agent/* /opt/agent-mcp/*
 
 CMD ["/run.sh"]

@@ -30,11 +30,14 @@ Add-on-Log beim Start.
 |---|---|
 | `firewall_mode` | `off` kein Filter · `learn` nichts blockieren, Ziele protokollieren · `enforce` nur `anthropic.com`, `claude.ai`, `claude.com` (+ Subdomains, 160.79.104.0/23) und der Supervisor-Proxy; DNS nur fuer diese Namen |
 | `setup_terminal` | Web-Terminal fuer Login und Tests; eingehend nur vom HA-Ingress-Proxy erreichbar |
+| `ha_write` | Schreibrecht in Home Assistant (Standard **aus** = nur lesen). Wirkt nach Neustart des Add-ons |
 | `pty` | Server in einem Pseudo-Terminal starten – nur falls er ohne Terminal nicht laeuft |
 
 ## Freigaben
 
 - `ha_read` (nur lesen) laeuft ohne Rueckfrage.
+- `ha_write` gibt es nur, wenn die Option `ha_write` an ist. Der Schalter liegt beim
+  Supervisor; der Hausmeister selbst kann ihn nicht umlegen.
 - `ha_write` fragt **jedes Mal** – das ist in den Managed Settings fest eingestellt und laesst
   sich in der App nicht auf „immer erlauben“ stellen. Vor dem Freigeben lesen, was geaendert wird.
 - Vor Aenderungen an Dashboards, Automationen, Skripten und Szenen legt `ha_write` den alten

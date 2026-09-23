@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.0
+- Neue Option `ha_write` (Standard: aus). Aus = der Hausmeister kann Home Assistant nur lesen:
+  `ha_write` wird in den Managed Settings verboten und vom MCP-Server abgelehnt.
+  Die Option verwaltet der Supervisor – der Agent kann sie nicht aendern.
+- Managed Settings werden bei jedem Start aus `/opt/agent/managed-settings.json` erzeugt
+
 ## 0.2.0
 - ha-mcp ersetzt durch eigenen MCP-Server `rootfs/opt/agent-mcp/homeassistant.mjs` (ohne Abhaengigkeiten)
   - `ha_read`: WebSocket-Befehle aus einer Lese-Liste und REST-GET, ohne Rueckfrage

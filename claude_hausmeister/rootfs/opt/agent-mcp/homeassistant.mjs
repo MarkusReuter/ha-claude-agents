@@ -3,6 +3,7 @@
 //
 //   ha_read  – nur Befehle aus READ_WS bzw. REST-GET; per Managed Settings ohne Rueckfrage
 //   ha_write – alles andere ausser BLOCK_*; per Managed Settings IMMER mit Rueckfrage.
+//              Nur wenn die Add-on-Option ha_write an ist (HA_WRITE=1), sonst verboten.
 //              Vor Dashboard-/Automations-/Skript-/Szenen-Aenderungen wird der alte Stand gesichert.
 //
 // Dateien (save_as, data_file) nur unter HA_FILES_DIR – der Server laeuft als 'agent' und
@@ -13,6 +14,8 @@ import readline from 'node:readline';
 
 const HA_URL = (process.env.HA_URL || '').replace(/\/$/, '');
 const HA_TOKEN = process.env.HA_TOKEN || '';
+// Schalter 'ha_write' in der Add-on-Konfiguration (vom Supervisor, fuer den Agenten unerreichbar)
+const WRITE_ENABLED = process.env.HA_WRITE === '1';
 const FILES = path.resolve(process.env.HA_FILES_DIR || '/data/workspace/ha');
 const MAX_CHARS = 40000;
 const TIMEOUT_MS = 60000;
@@ -158,6 +161,7 @@ async function backup(kind, name, loader) {
 }
 
 async function haWrite(args) {
+  if (!WRITE_ENABLED) throw new Error('Schreibrecht ist aus (Add-on-Option ha_write). Markus kann es in der Add-on-Konfiguration einschalten.');
   let payload = args.data;
   if (args.data_file) payload = JSON.parse(fs.readFileSync(filePath(args.data_file), 'utf8'));
 

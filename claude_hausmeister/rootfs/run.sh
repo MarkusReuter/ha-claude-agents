@@ -7,6 +7,19 @@ opt() { jq -r --arg k "$1" '.[$k] | tostring' /data/options.json 2>/dev/null | g
 FIREWALL_MODE=$(opt firewall_mode learn)
 SETUP_TERMINAL=$(opt setup_terminal false)
 USE_PTY=$(opt pty false)
+[[ "$(opt ha_write false)" == "true" ]] && HA_WRITE=1 || HA_WRITE=0
+
+# Managed Settings bei jedem Start aus der Vorlage im Image erzeugen (root-eigen).
+# Schreibrecht aus: ha_write wird verboten (Claude Code bietet das Werkzeug dann gar nicht an);
+# zusaetzlich lehnt der MCP-Server Schreibbefehle ueber HA_WRITE=0 selbst ab.
+install -d -o root -g root -m 0755 /etc/claude-code
+if [[ "$HA_WRITE" == "1" ]]; then
+  jq . /opt/agent/managed-settings.json > /etc/claude-code/managed-settings.json
+else
+  jq '.permissions.deny += ["mcp__homeassistant__ha_write"]
+      | .permissions.ask -= ["mcp__homeassistant__ha_write"]'      /opt/agent/managed-settings.json > /etc/claude-code/managed-settings.json
+fi
+chown root:root /etc/claude-code/managed-settings.json; chmod 0644 /etc/claude-code/managed-settings.json
 
 # Persistente Verzeichnisse. Der Arbeitsordner gehoert root (Sticky-Bit): der Agent darf dort
 # Notizen anlegen, aber weder CLAUDE.md noch .claude/ oder .mcp.json anlegen/aendern –
@@ -20,6 +33,7 @@ install -o root -g root -m 0644 /opt/agent/CLAUDE.md "$WORKSPACE/CLAUDE.md"
 echo '{"mcpServers":{}}' > "$WORKSPACE/.mcp.json"; chown root:root "$WORKSPACE/.mcp.json"; chmod 0644 "$WORKSPACE/.mcp.json"
 
 log "Start – Claude Code $(as_agent claude --version 2>&1 | head -1), Container $(container_name)"
+log "Home Assistant: $([[ "$HA_WRITE" == "1" ]] && echo "lesen + SCHREIBEN (jede Aenderung mit Freigabe)" || echo "nur lesen (Option ha_write aus)")"
 
 # Egress-Firewall. enforce schlaegt fehl -> Agent startet nicht (fail closed).
 if ! /usr/local/bin/firewall.sh "$FIREWALL_MODE"; then

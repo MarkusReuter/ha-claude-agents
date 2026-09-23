@@ -70,6 +70,12 @@ Firewall-Freigabe fuer `homeassistant.fritz.box:8123` noetig, kein eigener Token
 | Rechteausweitung ueber HA (Tokens/Benutzer anlegen, Integrationen, Add-ons, Backups) | Sperrliste im MCP-Server, auch in Automations-/Skript-Inhalten (`hassio.*`, `backup.*`) |
 | Kaputte Dashboards/Automationen | automatische Sicherung vor jedem Speichern |
 
+Schalter `ha_write` (ab 0.3.0, Standard aus): Add-on-Option, gespeichert vom Supervisor.
+`run.sh` liest sie als root vor der Rechteabgabe, erzeugt daraus die Managed Settings (Deny fuer
+`ha_write`) und gibt `HA_WRITE=0/1` an den MCP-Server. Der Agent erreicht die Supervisor-API weder
+direkt (`hassio_api: false`) noch ueber HA Core (`supervisor/api`, `/api/hassio`, `hassio.*` im
+MCP-Server gesperrt; er hat keinen anderen Weg zu HA als diesen root-eigenen Server).
+
 Grenzen: Die Sperrliste ist eine Schutzschicht gegen Fehler und Injection, keine harte Grenze –
 ein HA-Admin kann vieles indirekt. Die tragende Schicht ist die Freigabe durch Markus.
 

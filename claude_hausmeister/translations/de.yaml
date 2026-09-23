@@ -8,6 +8,11 @@ configuration:
     name: Einrichtungs-Terminal
     description: >-
       Web-Terminal (Web-UI) fuer Login und Tests. Nach der Einrichtung ausschalten.
+  ha_write:
+    name: Schreibrecht in Home Assistant
+    description: >-
+      Erlaubt dem Hausmeister Aenderungen (Dashboards, Automationen, Helfer, Schalten) –
+      jede einzeln mit Freigabe. Aus = nur lesen. Wirkt nach Neustart des Add-ons.
   pty:
     name: Pseudo-Terminal
     description: >-
