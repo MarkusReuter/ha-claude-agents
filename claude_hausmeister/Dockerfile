@@ -6,7 +6,7 @@ RUN npm install -g --omit=dev "ha-mcp@${HA_MCP_VERSION}" && npm cache clean --fo
 FROM debian:trixie-slim
 
 # "stable", "latest" oder eine feste Versionsnummer (z. B. 2.1.278)
-ARG CLAUDE_CODE_VERSION=stable
+ARG CLAUDE_CODE_VERSION=2.1.273
 ARG TTYD_VERSION=1.7.7
 ARG TTYD_SHA256=8a217c968aba172e0dbf3f34447218dc015bc4d5e59bf51db2f2cd12b7be4f55
 ENV DEBIAN_FRONTEND=noninteractive

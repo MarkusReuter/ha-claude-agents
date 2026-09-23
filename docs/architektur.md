@@ -46,6 +46,16 @@ Ergaenzt `uebergabe.md`. Hier steht, was gebaut ist und wo es vom Entwurf abweic
 **Offen, nur auf HAOS pruefbar:** nf_tables im HAOS-Kernel, `http://supervisor/core` als
 WebSocket-Ziel fuer ha-mcp, Dauerbetrieb ohne TTY, Ingress mit ttyd, benoetigte Domains.
 
+## Auf HAOS verifiziert (23.09.2026, HAOS 18.3, Kernel 6.18)
+
+- Installation aus dem GitHub-Repo, lokaler Build durch den Supervisor ok (Slug `f9239780_claude_hausmeister`).
+- Ingress-Terminal (ttyd) funktioniert; Einrichtung mit Pro-Konto ok.
+- Stolperstein: Im Trust-Dialog ist "No, exit" vorausgewaehlt -> ab 0.1.1 wiederholt die
+  Einrichtung Schritt 1, bis Trust und Login gespeichert sind.
+- Remote Control laeuft ohne TTY (`pty: false`). RAM mit laufendem Server: ca. 280 MB.
+- Abnahme 1, 3, 4 bestanden (Sitzung in der App, Bash/Web verweigert, sun.sun per ha-mcp
+  ueber `http://supervisor/core`).
+
 ## Abnahme Stufe 1 (Plan 1.5, auf HAOS uebertragen)
 
 | # | Pruefung | Erwartung |

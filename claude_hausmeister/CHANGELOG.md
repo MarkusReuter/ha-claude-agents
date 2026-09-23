@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.1
+- Einrichtung wiederholt Schritt 1, bis Ordner-Vertrauen und Login gespeichert sind; Statuszeile
+- Claude Code fest auf 2.1.273 gepinnt (bisher Kanal `stable`)
+
 ## 0.1.0
 - Erste Version: Claude Code als Remote-Control-Server mit Neustart-Schleife
 - Home Assistant per ha-mcp 0.1.6 (stdio, ueber den Supervisor-Proxy), fest in
