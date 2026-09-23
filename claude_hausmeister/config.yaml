@@ -1,0 +1,32 @@
+name: Claude Hausmeister
+version: "0.1.0"
+slug: claude_hausmeister
+description: Claude-Code-Agent "Hausmeister" – Home Assistant per Remote Control aus der Claude-App
+url: https://github.com/MarkusReuter/ha-claude-agents
+arch:
+  - amd64
+startup: application
+boot: auto
+stdin: false
+# Hausmeister darf HA Core ansprechen (ha-mcp ueber http://supervisor/core), nicht den Supervisor
+homeassistant_api: true
+hassio_api: false
+auth_api: false
+host_network: false
+# Einrichtungs-Terminal (ttyd). Laeuft nur bei setup_terminal: true, eingehend nur vom Ingress-Proxy.
+ingress: true
+ingress_port: 7681
+panel_icon: mdi:robot-outline
+panel_title: Hausmeister
+panel_admin: true
+# Nur fuer die Egress-Firewall im Container (nftables). Claude Code selbst laeuft ohne Capabilities.
+privileged:
+  - NET_ADMIN
+options:
+  firewall_mode: learn
+  setup_terminal: true
+  pty: false
+schema:
+  firewall_mode: list(off|learn|enforce)
+  setup_terminal: bool
+  pty: bool

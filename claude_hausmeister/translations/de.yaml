@@ -1,0 +1,15 @@
+configuration:
+  firewall_mode:
+    name: Firewall-Modus
+    description: >-
+      off = kein Egress-Filter · learn = nichts blockieren, nur protokollieren ·
+      enforce = nur Anthropic und Home Assistant erreichbar
+  setup_terminal:
+    name: Einrichtungs-Terminal
+    description: >-
+      Web-Terminal (Web-UI) fuer Login und Tests. Nach der Einrichtung ausschalten.
+  pty:
+    name: Pseudo-Terminal
+    description: >-
+      Remote-Control-Server in einem Pseudo-Terminal starten. Nur einschalten, falls er
+      ohne Terminal nicht laeuft.

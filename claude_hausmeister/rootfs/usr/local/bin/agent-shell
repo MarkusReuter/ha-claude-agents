@@ -1,0 +1,8 @@
+#!/bin/bash
+# Fallback zur Einrichtung ohne Ingress-Terminal, als root aufzurufen per:
+#   docker exec -it addon_<hash>_claude_hausmeister agent-shell
+# Gibt die Rechte ab und startet dieselbe Einrichtung wie das Ingress-Terminal.
+set -uo pipefail
+source /usr/local/lib/agent-common.sh
+cd "$WORKSPACE"
+as_agent /usr/local/bin/agent-setup

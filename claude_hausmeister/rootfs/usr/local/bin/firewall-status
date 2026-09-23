@@ -1,0 +1,15 @@
+#!/bin/bash
+# Auswertung der Egress-Firewall. Aufruf als root:
+#   docker exec addon_<hash>_claude_hausmeister firewall-status
+if ! nft list table inet agentfw >/dev/null 2>&1; then
+  echo "Keine Firewall-Tabelle aktiv (firewall_mode: off?)"
+  exit 0
+fi
+echo "== Regeln und Zaehler"
+nft list chain inet agentfw output
+echo
+echo "== Ziele, die 'enforce' blockieren wuerde (IP . Protokoll . Port)"
+nft list set inet agentfw waere_blockiert | sed -n '/elements/,/}/p'
+echo
+echo "== Aktuell erlaubte Domain-IPs"
+nft list set inet agentfw allow4 | sed -n '/elements/,/}/p'

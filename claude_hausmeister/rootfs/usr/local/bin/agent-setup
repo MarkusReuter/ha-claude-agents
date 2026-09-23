@@ -1,0 +1,43 @@
+#!/bin/bash
+# Gefuehrte Einrichtung, laeuft bereits als Nutzer 'agent' (im Ingress-Terminal oder per agent-shell).
+set -uo pipefail
+cd "$WORKSPACE"
+# Strg+C soll nur das laufende Programm beenden, nicht dieses Skript
+trap 'echo' INT
+
+logged_in() { [[ -s "$CLAUDE_CONFIG_DIR/.credentials.json" ]]; }
+weiter() { read -rp "  [Enter] = ausfuehren, s = ueberspringen: " a; [[ "$a" != "s" ]]; }
+
+cat <<TXT
+
+=== Einrichtung "$SESSION_NAME" (Nutzer: $(id -un), Ordner: $WORKSPACE) ===
+Status: Login $(logged_in && echo "vorhanden" || echo "FEHLT") · Remote Control $([[ -f "$SETUP_MARKER" ]] && echo "freigeschaltet" || echo "noch nicht bestaetigt")
+
+Schritt 1 – Anmelden
+  Startet 'claude'. Den Trust-Dialog bestaetigen, dann /login mit dem PRIVATEN Pro-Konto:
+  Link oeffnen, Code hier einfuegen. Danach /exit.
+TXT
+if weiter; then claude; fi
+
+cat <<TXT
+
+Schritt 2 – Remote Control freischalten
+  Startet 'claude remote-control'. "Enable Remote Control?" mit y bestaetigen.
+  Sobald die Session-URL erscheint: Strg+C (das Add-on startet den Dauerbetrieb selbst).
+TXT
+if weiter; then
+  claude remote-control --name "$SESSION_NAME (Einrichtung)"
+  read -rp "  Hat die Session-URL angezeigt? [j/N] " ok
+  if [[ "$ok" =~ ^[jJ]$ ]]; then
+    touch "$SETUP_MARKER"
+    echo "  OK – das Add-on startet '$SESSION_NAME' innerhalb einer Minute."
+  fi
+fi
+
+cat <<TXT
+
+Fertig. Du bist jetzt in einer Shell als 'agent' (fuer Tests, z. B. curl -m5 https://example.com).
+Mit 'exit' beenden. Danach im Add-on 'setup_terminal' wieder ausschalten.
+TXT
+trap - INT
+exec bash --noprofile --norc -i

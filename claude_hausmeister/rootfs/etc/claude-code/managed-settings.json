@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "deny": [
+      "Bash",
+      "WebFetch",
+      "WebSearch",
+      "Read(//data/claude/**)",
+      "Edit(//data/claude/**)",
+      "Read(//proc/**)",
+      "Edit(//etc/**)",
+      "Edit(//opt/**)",
+      "Edit(//usr/**)",
+      "Edit(//home/**)",
+      "Edit(//data/workspace/.claude/**)",
+      "Edit(//data/workspace/.mcp.json)",
+      "Edit(//data/workspace/CLAUDE.md)"
+    ],
+    "disableBypassPermissionsMode": "disable"
+  },
+  "allowManagedHooksOnly": true,
+  "env": {
+    "DISABLE_AUTOUPDATER": "1"
+  }
+}
