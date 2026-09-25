@@ -13,6 +13,9 @@ configuration:
   paperless_token:
     name: Paperless token
     description: API token of the dedicated Paperless user "archivar" (no delete permission).
+  paperless_link_url:
+    name: Paperless address for links
+    description: Address you open Paperless with in the browser. Used only for clickable links, never requested. Empty = no links.
   paperless_write:
     name: Write access to Paperless
     description: Allow replacing content and setting OCR tags (each needs approval). Off = read only. Takes effect after restart.

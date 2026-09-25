@@ -161,7 +161,7 @@ before(async () => {
   baseUrl = `http://127.0.0.1:${mock.address().port}`;
   ocrDir = fs.mkdtempSync(path.join(os.tmpdir(), 'archivar-ocr-'));
   const env = { PAPERLESS_URL: baseUrl, PAPERLESS_TOKEN: TOKEN, OCR_DIR: ocrDir, TZ: 'Europe/Berlin' };
-  client = new Client({ ...env, PAPERLESS_WRITE: '1' });
+  client = new Client({ ...env, PAPERLESS_WRITE: '1', PAPERLESS_LINK_URL: 'https://paperless.example.org/' });
   readOnly = new Client({ ...env, PAPERLESS_WRITE: '0' });
   await client.rpc('initialize', {});
   await readOnly.rpc('initialize', {});
@@ -393,6 +393,33 @@ describe('find_suspicious_ocr', () => {
     assert.equal(data.uebersprungen_mit_ocr_tag, 1);
     assert.match(data.kandidaten.find((k) => k.id === 4000).gruende.join(' '), /kaputte Umlaute/);
     assert.equal(writes().length, 0);
+  });
+});
+
+describe('Links (paperless_link_url)', () => {
+  const L = 'https://paperless.example.org/documents/1234/details';
+  test('Lesewerkzeuge liefern den Link zum Dokument', async () => {
+    assert.match((await client.call('get_document', { id: 1234 })).text, new RegExp(`"link": "${L}"`));
+    const s = JSON.parse((await client.call('search_documents', { query: 'strom' })).text);
+    assert.equal(s.dokumente.find((d) => d.id === 1234).link, L);
+    const f = JSON.parse((await client.call('find_suspicious_ocr', {})).text);
+    assert.equal(f.kandidaten.find((k) => k.id === 4000).link, 'https://paperless.example.org/documents/4000/details');
+    assert.match((await client.call('download_original', { id: 1234 })).text, new RegExp(`Link: ${L}`));
+  });
+
+  test('Aenderungen nennen den Link', async () => {
+    assert.match((await client.call('update_content', { id: 1234, text: 'Neu' })).text, new RegExp(`Link: ${L}$`));
+    assert.match((await client.call('set_ocr_tags', { id: 1234, action: 'erledigt' })).text, new RegExp(`Link: ${L}$`));
+  });
+
+  test('ohne Option keine Links', async () => {
+    const r = await readOnly.call('get_document', { id: 1234 });
+    assert.doesNotMatch(r.text, /"link"|example\.org/);
+  });
+
+  test('die Link-Adresse wird nie angefragt', async () => {
+    await client.call('get_document', { id: 1234 });
+    assert.ok(requests.every((x) => !x.path.includes('example.org')));
   });
 });
 

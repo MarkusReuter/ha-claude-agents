@@ -24,6 +24,9 @@ const OCR_DIR = path.resolve(process.env.OCR_DIR || '/work/ocr');
 const TAG_NEU = process.env.TAG_OCR_NEU || 'ocr-neu';
 const TAG_CLAUDE = process.env.TAG_OCR_CLAUDE || 'ocr-claude';
 const TZ = process.env.TZ || 'Europe/Berlin';
+// Oeffentliche Paperless-Adresse nur fuer klickbare Links in den Antworten (wird nie angefragt)
+const LINK_BASE = /^https?:\/\/[^\s"'<>()[\]]+$/.test(process.env.PAPERLESS_LINK_URL || '')
+  ? process.env.PAPERLESS_LINK_URL.replace(/\/+$/, '') : '';
 const TIMEOUT_MS = 60000;
 const DOWNLOAD_TIMEOUT_MS = 180000;
 const MAX_DOWNLOAD = 100 * 1024 * 1024;
@@ -191,9 +194,13 @@ async function filterQuery({ query, date_from, date_to, tag, correspondent }) {
   return q;
 }
 
+const link = (id) => (LINK_BASE ? `${LINK_BASE}/documents/${id}/details` : undefined);
+const linkLine = (id) => (LINK_BASE ? `\nLink: ${link(id)}` : '');
+
 function summary(d, n) {
   return {
     id: d.id,
+    link: link(d.id),
     titel: d.title,
     datum: d.created ? String(d.created).slice(0, 10) : null,
     korrespondent: d.correspondent ? (n.corr.get(d.correspondent) ?? `#${d.correspondent}`) : null,
@@ -337,6 +344,7 @@ async function downloadOriginal(a) {
     `Gespeichert: ${file}`,
     `Dokument ${id} "${d.title}", ${original ? `Original (${d.mime_type})` : `Archiv-PDF, da Original ${d.mime_type}`}, `
       + `${pages ?? '?'} Seite(n), ${(buf.length / 1024).toFixed(0)} KB.`,
+    ...(LINK_BASE ? [`Link: ${link(id)}`] : []),
     type.ext === 'pdf'
       ? 'Mit Read lesen; bei mehr als 20 Seiten abschnittsweise (pages: "1-20", "21-40", ...).'
       : 'Mit Read lesen (Bild).',
@@ -349,7 +357,7 @@ async function updateContent(a) {
   if (typeof a.text !== 'string' || !a.text.trim()) throw new Error('text darf nicht leer sein');
   const d = await request('GET', `/api/documents/${id}/`);
   const old = d.content ?? '';
-  if (old === a.text) return `Dokument ${id}: Inhalt ist bereits identisch – nichts geaendert.`;
+  if (old === a.text) return `Dokument ${id}: Inhalt ist bereits identisch – nichts geaendert.${linkLine(id)}`;
 
   const note = `Inhalt vor Claude-OCR (${now()})\n\n${old.trim() ? old : '(leer)'}`;
   try {
@@ -366,7 +374,7 @@ async function updateContent(a) {
   clearOcrDir(id);
   const check = r?.content === a.text ? '' : '\nWARNUNG: Paperless meldet einen abweichenden Inhalt – bitte mit get_document pruefen.';
   return `Dokument ${id} "${d.title}": Inhalt ersetzt (${old.length} → ${a.text.length} Zeichen). `
-    + `Alter Inhalt als Notiz gesichert. Heruntergeladene Datei geloescht.${check}`;
+    + `Alter Inhalt als Notiz gesichert. Heruntergeladene Datei geloescht.${check}${linkLine(id)}`;
 }
 
 const ACTIONS = {
@@ -392,13 +400,14 @@ async function setOcrTags(a) {
   const next = current.filter((t) => !remove.includes(t));
   for (const t of add) if (!next.includes(t)) next.push(t);
   if (next.length === current.length && next.every((t) => current.includes(t))) {
-    return `Dokument ${id}: OCR-Tags bereits wie gewuenscht – nichts geaendert.`;
+    return `Dokument ${id}: OCR-Tags bereits wie gewuenscht – nichts geaendert.${linkLine(id)}`;
   }
   const r = await request('PATCH', `/api/documents/${id}/`, { body: { tags: next } });
   const kept = current.filter((t) => !remove.includes(t));
   const lost = kept.filter((t) => !(r?.tags || next).includes(t));
   return `Dokument ${id} "${d.title}": ${[...act.remove.map((t) => `-${t}`), ...act.add.map((t) => `+${t}`)].join(' ')}.`
-    + (lost.length ? `\nWARNUNG: Paperless meldet fehlende Tags ${lost.join(', ')} – bitte pruefen.` : '');
+    + (lost.length ? `\nWARNUNG: Paperless meldet fehlende Tags ${lost.join(', ')} – bitte pruefen.` : '')
+    + linkLine(id);
 }
 
 async function findSuspiciousOcr(a) {
@@ -424,7 +433,7 @@ async function findSuspiciousOcr(a) {
       if ((x.tags || []).some((t) => skip.includes(t))) { skipped++; continue; }
       const r = analyze(x.content, x.page_count);
       if (r.score >= minScore) {
-        hits.push({ id: x.id, titel: x.title, datum: x.created ? String(x.created).slice(0, 10) : null,
+        hits.push({ id: x.id, link: link(x.id), titel: x.title, datum: x.created ? String(x.created).slice(0, 10) : null,
                     seiten: x.page_count ?? null, zeichen: r.zeichen, score: r.score, gruende: r.gruende });
       }
     }

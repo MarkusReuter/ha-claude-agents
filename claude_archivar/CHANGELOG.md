@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.1
+- Neue Option `paperless_link_url`: Die Werkzeuge liefern zu jedem Dokument einen Link
+  `<adresse>/documents/<id>/details`, der Archivar nennt Dokumente damit als klickbare Links
+  (PDFs lassen sich in der App nicht anzeigen, im Browser mit eigenem Login schon).
+  Nur Text – die Adresse wird nie abgerufen und ist kein Firewall-Ziel.
+- MCP-Server beendet sich bei geschlossenem stdin erst nach offenen Anfragen
+
 ## 0.1.0
 - Erste Version nach dem Muster des Hausmeisters (Remote Control, Managed Settings,
   Egress-Firewall, Einrichtungs-Terminal)

@@ -8,6 +8,7 @@
         "PAPERLESS_URL": "${PAPERLESS_URL}",
         "PAPERLESS_TOKEN": "${PAPERLESS_TOKEN}",
         "PAPERLESS_WRITE": "${PAPERLESS_WRITE:-0}",
+        "PAPERLESS_LINK_URL": "${PAPERLESS_LINK_URL:-}",
         "OCR_DIR": "${OCR_DIR:-/work/ocr}",
         "TAG_OCR_NEU": "${TAG_OCR_NEU:-ocr-neu}",
         "TAG_OCR_CLAUDE": "${TAG_OCR_CLAUDE:-ocr-claude}",

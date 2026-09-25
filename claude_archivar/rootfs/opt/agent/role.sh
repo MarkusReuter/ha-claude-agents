@@ -6,6 +6,8 @@
 PAPERLESS_URL=$(opt paperless_url "http://ca5234a0-paperless-ngx:80")
 PAPERLESS_URL=${PAPERLESS_URL%/}
 PAPERLESS_TOKEN=$(opt paperless_token "")
+# Oeffentliche Adresse nur fuer klickbare Links in den Antworten (kein Firewall-Ziel)
+PAPERLESS_LINK_URL=$(opt paperless_link_url "")
 [[ "$(opt paperless_write false)" == "true" ]] && PAPERLESS_WRITE=1 || PAPERLESS_WRITE=0
 TAG_OCR_NEU=$(opt tag_ocr_neu ocr-neu)
 TAG_OCR_CLAUDE=$(opt tag_ocr_claude ocr-claude)
@@ -18,7 +20,7 @@ if [[ "$PAPERLESS_URL" =~ ^(https?)://([A-Za-z0-9.-]+)(:([0-9]{1,5}))?(/[A-Za-z0
   PAPERLESS_URL_OK=1
 fi
 
-AGENT_ENV+=(PAPERLESS_URL="$PAPERLESS_URL" PAPERLESS_TOKEN="$PAPERLESS_TOKEN"
+AGENT_ENV+=(PAPERLESS_URL="$PAPERLESS_URL" PAPERLESS_TOKEN="$PAPERLESS_TOKEN" PAPERLESS_LINK_URL="$PAPERLESS_LINK_URL"
             PAPERLESS_WRITE="$PAPERLESS_WRITE" OCR_DIR="$OCR_DIR"
             TAG_OCR_NEU="$TAG_OCR_NEU" TAG_OCR_CLAUDE="$TAG_OCR_CLAUDE")
 
@@ -45,4 +47,5 @@ role_prepare() {
   [[ -n "$PAPERLESS_TOKEN" ]] || log "WARNUNG: paperless_token ist leer – der Archivar erreicht Paperless nicht."
   log "Paperless: $PAPERLESS_URL – $([[ "$PAPERLESS_WRITE" == "1" ]] && echo "lesen + Inhalt/OCR-Tags aendern (jede Aenderung mit Freigabe)" || echo "nur lesen (Option paperless_write aus)")"
   log "OCR-Tags: '$TAG_OCR_NEU', '$TAG_OCR_CLAUDE'"
+  log "Links in Antworten: ${PAPERLESS_LINK_URL:-keine (Option paperless_link_url leer)}"
 }

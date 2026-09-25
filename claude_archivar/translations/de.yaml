@@ -17,6 +17,11 @@ configuration:
     name: Paperless-Token
     description: >-
       API-Token des eigenen Paperless-Benutzers "archivar" (ohne Loeschrecht, siehe Dokumentation).
+  paperless_link_url:
+    name: Paperless-Adresse fuer Links
+    description: >-
+      Adresse, unter der du Paperless im Browser oeffnest (z. B. https://paperless.example.org).
+      Der Archivar zeigt Dokumente damit als klickbare Links. Nur Text – wird nie abgerufen. Leer = keine Links.
   paperless_write:
     name: Schreibrecht in Paperless
     description: >-

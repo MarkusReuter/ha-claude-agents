@@ -1,5 +1,5 @@
 name: Claude Archivar
-version: "0.1.0"
+version: "0.1.1"
 slug: claude_archivar
 description: Claude-Code-Agent "Archivar" – Paperless-ngx durchsuchen und OCR verbessern, per Remote Control aus der Claude-App
 url: https://github.com/MarkusReuter/ha-claude-agents
@@ -28,6 +28,7 @@ options:
   pty: false
   paperless_url: http://ca5234a0-paperless-ngx:80
   paperless_token: ""
+  paperless_link_url: ""
   paperless_write: false
   tag_ocr_neu: ocr-neu
   tag_ocr_claude: ocr-claude
@@ -37,6 +38,7 @@ schema:
   pty: bool
   paperless_url: url
   paperless_token: password
+  paperless_link_url: match(^(https?://[^\s"<>()]+)?$)
   paperless_write: bool
   tag_ocr_neu: match(^[^\s,][^,]{0,127}$)
   tag_ocr_claude: match(^[^\s,][^,]{0,127}$)
