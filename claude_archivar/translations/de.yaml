@@ -1,0 +1,35 @@
+configuration:
+  firewall_mode:
+    name: Firewall-Modus
+    description: >-
+      off = kein Egress-Filter · learn = nichts blockieren, nur protokollieren ·
+      enforce = nur Anthropic und Paperless erreichbar
+  setup_terminal:
+    name: Einrichtungs-Terminal
+    description: >-
+      Web-Terminal (Web-UI) fuer Login und Tests. Nach der Einrichtung ausschalten.
+  paperless_url:
+    name: Paperless-URL
+    description: >-
+      Interne Adresse von Paperless-ngx im Add-on-Netz (ohne /api), z. B.
+      http://ca5234a0-paperless-ngx:80. Wird auch als einziges internes Firewall-Ziel freigegeben.
+  paperless_token:
+    name: Paperless-Token
+    description: >-
+      API-Token des eigenen Paperless-Benutzers "archivar" (ohne Loeschrecht, siehe Dokumentation).
+  paperless_write:
+    name: Schreibrecht in Paperless
+    description: >-
+      Erlaubt dem Archivar, den Inhalt (OCR-Text) zu ersetzen und die OCR-Tags zu setzen –
+      jede Aenderung einzeln mit Freigabe. Aus = nur lesen. Wirkt nach Neustart des Add-ons.
+  tag_ocr_neu:
+    name: Tag "neu auslesen"
+    description: Tag fuer Dokumente, deren OCR der Archivar neu erstellen soll.
+  tag_ocr_claude:
+    name: Tag "von Claude ausgelesen"
+    description: Tag fuer Dokumente, deren Inhalt der Archivar ersetzt hat.
+  pty:
+    name: Pseudo-Terminal
+    description: >-
+      Remote-Control-Server in einem Pseudo-Terminal starten. Nur einschalten, falls er
+      ohne Terminal nicht laeuft.

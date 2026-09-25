@@ -11,6 +11,10 @@ Home-Assistant-Add-on-Repository fuer drei private Claude-Code-Agenten
 - Sicherheitsrelevante Aenderungen (managed-settings.json, managed-mcp.json, firewall.sh,
   agent-common.sh, config.yaml-Rechte, Rechte im Workspace) immer begruenden.
 - Updates: `version` in `config.yaml` hochzaehlen + CHANGELOG, sonst baut der Supervisor nicht neu.
+- Gemeinsame Dateien (run.sh, agent-common.sh, agent-setup, agent-shell, firewall*.sh) nur in
+  `claude_hausmeister/` aendern, dann `tools/check-common.sh --sync`; alle betroffenen Add-ons hochzaehlen.
+  Rollenspezifisches gehoert nach `rootfs/opt/agent/role.env` und `role.sh`.
+- Tests Archivar-MCP: `node --test claude_archivar/tests/*.test.mjs`
 
 ## Zugriff auf Home Assistant (fuer Claude in VS Code)
 

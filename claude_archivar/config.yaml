@@ -1,0 +1,42 @@
+name: Claude Archivar
+version: "0.1.0"
+slug: claude_archivar
+description: Claude-Code-Agent "Archivar" – Paperless-ngx durchsuchen und OCR verbessern, per Remote Control aus der Claude-App
+url: https://github.com/MarkusReuter/ha-claude-agents
+arch:
+  - amd64
+startup: application
+boot: auto
+stdin: false
+# Kein Zugang zu HA Core oder Supervisor – der Archivar spricht nur mit Paperless (eigener MCP)
+homeassistant_api: false
+hassio_api: false
+auth_api: false
+host_network: false
+# Einrichtungs-Terminal (ttyd). Laeuft nur bei setup_terminal: true, eingehend nur vom Ingress-Proxy.
+ingress: true
+ingress_port: 7681
+panel_icon: mdi:archive-search-outline
+panel_title: Archivar
+panel_admin: true
+# Nur fuer die Egress-Firewall im Container (nftables). Claude Code selbst laeuft ohne Capabilities.
+privileged:
+  - NET_ADMIN
+options:
+  firewall_mode: learn
+  setup_terminal: true
+  pty: false
+  paperless_url: http://ca5234a0-paperless-ngx:80
+  paperless_token: ""
+  paperless_write: false
+  tag_ocr_neu: ocr-neu
+  tag_ocr_claude: ocr-claude
+schema:
+  firewall_mode: list(off|learn|enforce)
+  setup_terminal: bool
+  pty: bool
+  paperless_url: url
+  paperless_token: password
+  paperless_write: bool
+  tag_ocr_neu: match(^[^\s,][^,]{0,127}$)
+  tag_ocr_claude: match(^[^\s,][^,]{0,127}$)

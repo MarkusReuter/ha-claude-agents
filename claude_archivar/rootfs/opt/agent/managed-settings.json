@@ -1,0 +1,73 @@
+{
+  "permissions": {
+    "deny": [
+      "Bash",
+      "WebFetch",
+      "WebSearch",
+      "NotebookEdit",
+      "Read(//bin/**)",
+      "Read(//boot/**)",
+      "Read(//data/**)",
+      "Read(//dev/**)",
+      "Read(//etc/**)",
+      "Read(//home/**)",
+      "Read(//lib/**)",
+      "Read(//lib64/**)",
+      "Read(//media/**)",
+      "Read(//mnt/**)",
+      "Read(//opt/**)",
+      "Read(//proc/**)",
+      "Read(//root/**)",
+      "Read(//run/**)",
+      "Read(//sbin/**)",
+      "Read(//srv/**)",
+      "Read(//sys/**)",
+      "Read(//tmp/**)",
+      "Read(//usr/**)",
+      "Read(//var/**)",
+      "Read(//work/.claude/**)",
+      "Read(//work/.mcp.json)",
+      "Edit(//bin/**)",
+      "Edit(//boot/**)",
+      "Edit(//data/**)",
+      "Edit(//dev/**)",
+      "Edit(//etc/**)",
+      "Edit(//home/**)",
+      "Edit(//lib/**)",
+      "Edit(//lib64/**)",
+      "Edit(//media/**)",
+      "Edit(//mnt/**)",
+      "Edit(//opt/**)",
+      "Edit(//proc/**)",
+      "Edit(//root/**)",
+      "Edit(//run/**)",
+      "Edit(//sbin/**)",
+      "Edit(//srv/**)",
+      "Edit(//sys/**)",
+      "Edit(//tmp/**)",
+      "Edit(//usr/**)",
+      "Edit(//var/**)",
+      "Edit(//work/.claude/**)",
+      "Edit(//work/.mcp.json)",
+      "Edit(//work/CLAUDE.md)"
+    ],
+    "ask": [
+      "mcp__paperless__update_content",
+      "mcp__paperless__set_ocr_tags"
+    ],
+    "allow": [
+      "mcp__paperless__search_documents",
+      "mcp__paperless__list_documents_by_tag",
+      "mcp__paperless__get_document",
+      "mcp__paperless__download_original",
+      "mcp__paperless__find_suspicious_ocr",
+      "Read(//work/ocr/**)",
+      "Read(//work/CLAUDE.md)"
+    ],
+    "disableBypassPermissionsMode": "disable"
+  },
+  "allowManagedHooksOnly": true,
+  "env": {
+    "DISABLE_AUTOUPDATER": "1"
+  }
+}

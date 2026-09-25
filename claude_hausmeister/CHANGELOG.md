@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.1
+- Gemeinsame Dateien mit dem Archivar (run.sh, agent-common.sh, agent-setup, agent-shell,
+  firewall.sh, firewall-status); Rollenspezifisches in `opt/agent/role.sh` und `role.env`.
+  `tools/check-common.sh` prueft, dass die Kopien identisch sind. Verhalten unveraendert, ausser:
+- Start bricht ab (fail closed), wenn die Managed Settings nicht erzeugt werden konnten
+- `/data/options.json` nur noch fuer root lesbar
+- firewall.sh prueft interne Ziele streng auf `host:port` und meldet nicht aufloesbare Ziele,
+  statt still abzubrechen
+
 ## 0.3.0
 - Neue Option `ha_write` (Standard: aus). Aus = der Hausmeister kann Home Assistant nur lesen:
   `ha_write` wird in den Managed Settings verboten und vom MCP-Server abgelehnt.

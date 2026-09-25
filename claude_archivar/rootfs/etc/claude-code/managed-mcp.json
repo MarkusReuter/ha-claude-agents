@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "paperless": {
+      "type": "stdio",
+      "command": "/usr/local/bin/node",
+      "args": ["/opt/agent-mcp/paperless.mjs"],
+      "env": {
+        "PAPERLESS_URL": "${PAPERLESS_URL}",
+        "PAPERLESS_TOKEN": "${PAPERLESS_TOKEN}",
+        "PAPERLESS_WRITE": "${PAPERLESS_WRITE:-0}",
+        "OCR_DIR": "${OCR_DIR:-/work/ocr}",
+        "TAG_OCR_NEU": "${TAG_OCR_NEU:-ocr-neu}",
+        "TAG_OCR_CLAUDE": "${TAG_OCR_CLAUDE:-ocr-claude}",
+        "TZ": "${TZ:-Europe/Berlin}"
+      }
+    }
+  }
+}

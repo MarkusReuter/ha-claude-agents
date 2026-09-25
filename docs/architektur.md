@@ -95,10 +95,49 @@ ein HA-Admin kann vieles indirekt. Die tragende Schicht ist die Freigabe durch M
 | 10 | RAM des Add-ons im Leerlauf und nach langer Sitzung | notieren (fuer 32-GB-Entscheidung) |
 | 11 | Backup auf den Ersatzrechner einspielen | Sitzung ohne neuen Login |
 
+## Gemeinsame Dateien (ab Hausmeister 0.3.1 / Archivar 0.1.0)
+
+Der Supervisor baut jedes Add-on nur aus seinem Ordner, gemeinsame Dateien liegen daher als
+Kopie vor: `run.sh`, `agent-common.sh`, `agent-setup`, `agent-shell`, `firewall.sh`,
+`firewall-status`. Referenz ist `claude_hausmeister/`; `tools/check-common.sh` prueft,
+`--sync` kopiert. Rollenspezifisch sind `role.env` (Name, Allowlist, Workspace), `role.sh`
+(Optionen → `AGENT_ENV`, `ALLOW_INTERNAL_EXTRA`, `role_prepare` erzeugt die Managed Settings),
+`CLAUDE.md`, `managed-settings.json` (Vorlage), `managed-mcp.json`, `opt/agent-mcp/*`.
+run.sh startet nicht, wenn die Managed Settings kein Bash-Verbot enthalten (fail closed), und
+setzt `/data/options.json` auf 0600 (Optionen koennen Zugangsdaten enthalten).
+
+## Archivar (0.1.0)
+
+Paperless-ngx per eigenem MCP `opt/agent-mcp/paperless.mjs` (Node, ohne Abhaengigkeiten, stdio).
+
+| Schicht | Umsetzung |
+|---|---|
+| Paperless-Rechte | eigener Benutzer *archivar* ohne Loeschrecht (Gruppen Rolle/Freigabe getrennt, siehe DOCS.md). Sieht nur Dokumente, die fuer *Users für Markus Bereich* freigegeben sind – nicht Julias |
+| MCP-Server | sieben feste Werkzeuge; `request()` kennt nur eine Liste aus Methode+Pfad (GET, POST nur Notizen/OCR-Tags, PATCH nur Dokument), prueft die Bodies (`{content}` oder `{tags}`), folgt keinen Weiterleitungen, entfernt den Token aus allen Texten. Kein Loeschen, kein `bulk_edit` (Test prueft den Quelltext) |
+| Freigaben | Lese-Werkzeuge allow; `update_content`, `set_ocr_tags` ask (Managed); Option `paperless_write` (Standard aus) verbietet beide zusaetzlich |
+| Dateien | Workspace `/work` (nicht persistent, root 0755), Originale in `/work/ocr` (agent 0700), eines zur Zeit, nach `update_content` geloescht. Read nur `/work/ocr/**` und `/work/CLAUDE.md` – realisiert als Deny fuer alle anderen Hauptordner (Deny schlaegt Allow, eine „alles ausser“-Regel gibt es nicht) |
+| Netz | Firewall-Ziel nur Host:Port aus `paperless_url` (intern `http://ca5234a0-paperless-ngx:80`, nicht die oeffentliche Adresse); kein HA-/Supervisor-Zugang |
+
+Grenze: Das Token-Recht „Dokument bearbeiten“ erlaubt in Paperless auch Drehen/Teilen/Mergen
+ueber `bulk_edit`. Dagegen schuetzen nur der MCP-Server und das Fehlen jedes anderen Wegs
+(kein Bash/Web, Firewall, `/data` nicht lesbar).
+
+Lokal verifiziert (Docker Desktop, 25.09.2026): Build ok (Claude Code 2.1.273, Node 22.23.3,
+poppler 25.03 – Claude Code ruft `pdftoppm` fuer PDF-Seiten auf); `enforce`: example.com blockiert,
+Paperless (ueber den Host-Port) und Anthropic erreichbar; agent kann `/data/options.json` und
+`/proc/1/environ` nicht lesen, nicht in `/work` schreiben; `claude mcp list`: `paperless ✔ Connected`;
+MCP-Aufruf gegen das echte Paperless mit ungueltigem Token: 401, Token nicht in der Ausgabe;
+nicht aufloesbarer Paperless-Host → Agent startet nicht. 31 Unit-Tests gruen.
+
+**Offen, nur auf HAOS pruefbar:** `ca5234a0-paperless-ngx` in `enforce` (einteiliger Name ueber
+dnsmasq), Read auf PDF/Bild ohne Bash in der App, die Deny-Liste mit `/permissions`, der 403-Test
+mit dem echten Token, Laufzeit/Nutzungslimit bei 15er-Stapeln.
+
+**Spaeter (IMAP, nur lesend):** zweiter Eintrag `imap` in `managed-mcp.json` mit eigener Datei
+`opt/agent-mcp/imap.mjs`, Optionen `imap_*`. Die Firewall erlaubt fuer Domains nur TCP 443 –
+fuer IMAPS (993) muss `firewall.sh` um Domain:Port erweitert werden.
+
 ## Danach
 
-- Feste Claude-Code-Version in `Dockerfile` pinnen (`CLAUDE_CODE_VERSION`).
-- Archivar/Sekretaer als Kopie von `claude_hausmeister/`. Unterschiede: `config.yaml`
-  (`homeassistant_api: false`), `role.env` (`KEEP_HA_TOKEN=0`, `ALLOW_INTERNAL`),
-  `CLAUDE.md`, `managed-mcp.json`, ggf. Deny-Ergaenzungen. Gemeinsame Dateien dann per Skript
-  synchron halten.
+- Sekretaer als weitere Kopie (gemeinsame Dateien per `tools/check-common.sh --sync`).
+- Hausmeister-Dockerfile ebenfalls auf eine feste Node-Version pinnen (Archivar: 22.23.3).
