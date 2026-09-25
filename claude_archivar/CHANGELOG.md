@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.2
+- Dokument-Links zeigen auf die Vorschau `<adresse>/api/documents/<id>/preview/` (PDF/Bild direkt
+  im Browser) statt auf die Detailseite; der abschliessende Schraegstrich ist fuer Paperless noetig
+
 ## 0.1.1
 - Neue Option `paperless_link_url`: Die Werkzeuge liefern zu jedem Dokument einen Link
   `<adresse>/documents/<id>/details`, der Archivar nennt Dokumente damit als klickbare Links

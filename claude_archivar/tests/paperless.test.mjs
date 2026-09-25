@@ -397,13 +397,13 @@ describe('find_suspicious_ocr', () => {
 });
 
 describe('Links (paperless_link_url)', () => {
-  const L = 'https://paperless.example.org/documents/1234/details';
+  const L = 'https://paperless.example.org/api/documents/1234/preview/';
   test('Lesewerkzeuge liefern den Link zum Dokument', async () => {
     assert.match((await client.call('get_document', { id: 1234 })).text, new RegExp(`"link": "${L}"`));
     const s = JSON.parse((await client.call('search_documents', { query: 'strom' })).text);
     assert.equal(s.dokumente.find((d) => d.id === 1234).link, L);
     const f = JSON.parse((await client.call('find_suspicious_ocr', {})).text);
-    assert.equal(f.kandidaten.find((k) => k.id === 4000).link, 'https://paperless.example.org/documents/4000/details');
+    assert.equal(f.kandidaten.find((k) => k.id === 4000).link, 'https://paperless.example.org/api/documents/4000/preview/');
     assert.match((await client.call('download_original', { id: 1234 })).text, new RegExp(`Link: ${L}`));
   });
 

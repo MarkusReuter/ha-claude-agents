@@ -194,7 +194,7 @@ async function filterQuery({ query, date_from, date_to, tag, correspondent }) {
   return q;
 }
 
-const link = (id) => (LINK_BASE ? `${LINK_BASE}/documents/${id}/details` : undefined);
+const link = (id) => (LINK_BASE ? `${LINK_BASE}/api/documents/${id}/preview/` : undefined);
 const linkLine = (id) => (LINK_BASE ? `\nLink: ${link(id)}` : '');
 
 function summary(d, n) {

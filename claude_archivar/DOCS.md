@@ -104,7 +104,7 @@ Ein Julia-Dokument muss beim Lesen `404` liefern.
 |---|---|
 | `paperless_url` | interne Paperless-Adresse; zugleich das einzige interne Firewall-Ziel |
 | `paperless_token` | Token des Benutzers *archivar* – wird nie geloggt, nur root kann die Optionen lesen |
-| `paperless_link_url` | Adresse, unter der du Paperless im Browser oeffnest. Der Archivar zeigt Dokumente dann als Links `…/documents/<id>/details` – anzeigen mit deinem eigenen Paperless-Login. Nur Text, wird nie abgerufen und ist kein Firewall-Ziel. Leer = keine Links |
+| `paperless_link_url` | Adresse, unter der du Paperless im Browser oeffnest. Der Archivar zeigt Dokumente dann als Links auf die Vorschau `…/api/documents/<id>/preview/` (PDF bzw. Bild im Browser) – anzeigen mit deinem eigenen Paperless-Login. Nur Text, wird nie abgerufen und ist kein Firewall-Ziel. Leer = keine Links |
 | `paperless_write` | Inhalt ersetzen und OCR-Tags setzen (Standard **aus** = nur lesen). Wirkt nach Neustart |
 | `tag_ocr_neu`, `tag_ocr_claude` | Namen der beiden OCR-Tags (Standard `ocr-neu`, `ocr-claude`) |
 | `firewall_mode` | `off` · `learn` (nichts blockieren, Ziele protokollieren) · `enforce` (nur Anthropic und Paperless; DNS nur fuer diese Namen) |
