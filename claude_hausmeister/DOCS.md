@@ -45,6 +45,8 @@ Add-on-Log beim Start.
   Sicherung zurueckzuschreiben.
 - Gesperrt, auch mit Freigabe: Benutzer/Anmeldung, Integrationen hinzufuegen/entfernen,
   Supervisor/Add-ons, Backups, Services `hassio.*` und `backup.*`.
+- Dateien aus `/data/workspace/ha/` (Konfigurationen, Sicherungen) schickt der Hausmeister auf
+  Wunsch mit `SendUserFile` in den Chat – nur an deine eigene App, ohne Freigabe.
 
 ## Firewall auswerten (learn → enforce)
 

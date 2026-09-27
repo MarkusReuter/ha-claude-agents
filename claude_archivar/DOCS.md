@@ -130,6 +130,9 @@ Ein Julia-Dokument muss beim Lesen `404` liefern.
 - Heruntergeladene Originale liegen nur im Container (`/work/ocr`, nicht im HA-Backup), immer
   nur eines, und werden nach `update_content` bzw. beim naechsten Download geloescht.
 - Geaendert wird nur das Inhaltsfeld (Suche/Anzeige). Die Textebene des Archiv-PDFs bleibt, wie sie ist.
+- Anzeigen in der App: Auf „zeig mir Dokument 1234“ laedt der Archivar das Original herunter und
+  schickt es mit dem Claude-Code-Werkzeug `SendUserFile` in den Chat (PDF/Bild mit Vorschau, auch
+  am Handy). Das geht nur an deine eigene App, nicht nach aussen, und braucht keine Freigabe.
 
 ## Beispiele in der App
 

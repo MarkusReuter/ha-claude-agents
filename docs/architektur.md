@@ -137,6 +137,22 @@ mit dem echten Token, Laufzeit/Nutzungslimit bei 15er-Stapeln.
 `opt/agent-mcp/imap.mjs`, Optionen `imap_*`. Die Firewall erlaubt fuer Domains nur TCP 443 –
 fuer IMAPS (993) muss `firewall.sh` um Domain:Port erweitert werden.
 
+## Dateien in der App anzeigen (Hausmeister 0.3.2 / Archivar 0.1.3)
+
+Claude Code (ab 2.1.196, hier 2.1.273) hat das Werkzeug `SendUserFile`: Es schickt eine Datei aus
+der Sitzung an den verbundenen Remote-Control-Client (Vorschau fuer PDF/Bilder mit
+`display: "render"`). Es braucht laut Doku keine Freigabe und steht in keiner Deny-Liste – die
+Rollen bekommen nur eine Anweisung in ihrer CLAUDE.md, wann sie es nutzen.
+
+Sicherheit: Empfaenger ist immer die eigene App (Zustellung ueber Anthropic an das angemeldete
+Konto), also kein Weg nach aussen. Ob das Werkzeug die Read-Denies beachtet, ist nicht
+dokumentiert – im schlimmsten Fall landet eine Datei, die der Agent-Nutzer lesen kann (z. B. der
+eigene Login unter `/data/claude`), bei Markus selbst. Geheimnisse, die nur root lesen kann
+(`/data/options.json`, `/proc/1/environ`), bleiben unerreichbar.
+
+**Offen, auf HAOS pruefen:** Vorschau in Handy- und Desktop-App; ob `SendUserFile(//data/claude/…)`
+verweigert wird.
+
 ## Danach
 
 - Sekretaer als weitere Kopie (gemeinsame Dateien per `tools/check-common.sh --sync`).

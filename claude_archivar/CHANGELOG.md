@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.3
+- Dokumente in der App anzeigen: Auf Wunsch schickt der Archivar das Original aus `/work/ocr/`
+  mit dem Claude-Code-Werkzeug `SendUserFile` in den Chat (PDF/Bild mit Vorschau). Nur
+  Rollenanweisung, keine Rechteaenderung (das Werkzeug braucht keine Freigabe und liefert nur an
+  die eigene App)
+
 ## 0.1.2
 - Dokument-Links zeigen auf die Vorschau `<adresse>/api/documents/<id>/preview/` (PDF/Bild direkt
   im Browser) statt auf die Detailseite; der abschliessende Schraegstrich ist fuer Paperless noetig

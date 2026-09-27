@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.2
+- Dateien in der App anzeigen: Auf Wunsch schickt der Hausmeister Dateien aus
+  `/data/workspace/ha/` mit dem Claude-Code-Werkzeug `SendUserFile` in den Chat. Nur
+  Rollenanweisung, keine Rechteaenderung
+
 ## 0.3.1
 - Gemeinsame Dateien mit dem Archivar (run.sh, agent-common.sh, agent-setup, agent-shell,
   firewall.sh, firewall-status); Rollenspezifisches in `opt/agent/role.sh` und `role.env`.

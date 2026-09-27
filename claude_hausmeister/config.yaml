@@ -1,5 +1,5 @@
 name: Claude Hausmeister
-version: "0.3.1"
+version: "0.3.2"
 slug: claude_hausmeister
 description: Claude-Code-Agent "Hausmeister" – Home Assistant per Remote Control aus der Claude-App
 url: https://github.com/MarkusReuter/ha-claude-agents
