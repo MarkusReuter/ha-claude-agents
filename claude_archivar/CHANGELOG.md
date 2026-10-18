@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.2
+- Firewall `enforce` unter HAOS repariert: Docker leitet DNS-Anfragen ueber seinen eingebauten
+  Resolver aus dem Container-Netz heraus an den HA-DNS weiter; diese Anfragen (als root) blockierte
+  die Firewall, Folge: `getaddrinfo EAI_AGAIN api.anthropic.com`. Sicherheitsrelevant: root darf
+  DNS jetzt an jeden Server schicken. Der Agent (UID 1000) bleibt auf dnsmasq beschraenkt, das
+  unter `enforce` nur erlaubte Namen aufloest – der DNS-Kanal bleibt fuer ihn geschlossen.
+  Neuer CI-Test `.github/workflows/firewall-test.yml` stellt den HAOS-Fall nach
+- Bis zu 3 gleichzeitige Sitzungen (vorher 2), je offene Sitzung rund 180 MB RAM
+
 ## 0.2.1
 - Add-on-Log aufgeraeumt: Die Statusanzeige von `claude remote-control` wurde alle paar Sekunden
   neu gezeichnet (zehntausende Zeilen pro Stunde). Jetzt ohne Steuerzeichen, Verbindung und

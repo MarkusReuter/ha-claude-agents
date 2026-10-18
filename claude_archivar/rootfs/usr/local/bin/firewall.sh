@@ -82,7 +82,10 @@ table inet agentfw {
     meta skuid != 0 meta nfproto ipv6 meta l4proto { tcp, udp } th dport 53 counter reject
     oifname "lo" accept
     ct state established,related accept
-    meta skuid 0 ip daddr $UPSTREAM_DNS meta l4proto { tcp, udp } th dport 53 accept
+    # DNS von root an beliebige Server: dnsmasq und Dockers eingebauter Resolver (127.0.0.11), der
+    # externe Anfragen unter HAOS aus diesem Netz heraus an den HA-DNS (172.30.32.3) weiterleitet.
+    # Der Agent (UID 1000) bleibt auf dnsmasq beschraenkt (Regeln oben), der DNS-Kanal also zu.
+    meta skuid 0 meta l4proto { tcp, udp } th dport 53 accept
     ip daddr $ANTHROPIC_NET tcp dport 443 accept
     ip daddr @allow4 tcp dport 443 accept
 $INTERNAL_RULES
