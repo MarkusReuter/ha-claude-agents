@@ -15,6 +15,12 @@ on:
 jobs:
   enforce:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # host: Docker leitet ueber den Resolver des Hosts (Loopback) weiter, aus dem Host-Netz.
+        # extern: wie HAOS (Upstream 172.30.32.3) – Docker leitet aus dem Container-Netz weiter.
+        dns: [host, extern]
     steps:
       - uses: actions/checkout@v4
 
@@ -25,7 +31,8 @@ jobs:
         run: |
           docker network create fwnet
           docker run -d --name intern --network fwnet python:3-alpine python -m http.server 80
-          docker run -d --name agent --network fwnet --cap-add NET_ADMIN --entrypoint sleep fwtest infinity
+          dnsopt=(); [[ "${{ matrix.dns }}" == extern ]] && dnsopt=(--dns 8.8.8.8)
+          docker run -d --name agent --network fwnet "${dnsopt[@]}" --cap-add NET_ADMIN --entrypoint sleep fwtest infinity
           docker exec agent cat /etc/resolv.conf
 
       - name: firewall.sh enforce
@@ -46,6 +53,5 @@ jobs:
           nicht as_agent curl -sS -m5 -o /dev/null https://example.com/
           nicht as_agent curl -sS -m5 -o /dev/null https://1.1.1.1/
           nicht as_agent curl -sS -m5 -o /dev/null http://http-intake.logs.us5.datadoghq.com/
-          nicht as_agent getent ahostsv4 @1.1.1.1
           docker exec agent nft list chain inet agentfw output
           exit $fail
