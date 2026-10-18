@@ -8,7 +8,7 @@
         "HA_URL": "${HA_URL}",
         "HA_TOKEN": "${HA_TOKEN}",
         "HA_WRITE": "${HA_WRITE:-0}",
-        "HA_FILES_DIR": "/data/workspace/ha"
+        "HA_FILES_DIR": "/data/hausmeister/ha"
       }
     }
   }

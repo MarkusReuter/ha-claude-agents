@@ -25,8 +25,8 @@
       "Read(//tmp/**)",
       "Read(//usr/**)",
       "Read(//var/**)",
-      "Read(//work/.claude/**)",
-      "Read(//work/.mcp.json)",
+      "Read(//archivar/.claude/**)",
+      "Read(//archivar/.mcp.json)",
       "Edit(//bin/**)",
       "Edit(//boot/**)",
       "Edit(//data/**)",
@@ -47,9 +47,9 @@
       "Edit(//tmp/**)",
       "Edit(//usr/**)",
       "Edit(//var/**)",
-      "Edit(//work/.claude/**)",
-      "Edit(//work/.mcp.json)",
-      "Edit(//work/CLAUDE.md)"
+      "Edit(//archivar/.claude/**)",
+      "Edit(//archivar/.mcp.json)",
+      "Edit(//archivar/CLAUDE.md)"
     ],
     "ask": [
       "mcp__paperless__update_content",
@@ -61,8 +61,8 @@
       "mcp__paperless__get_document",
       "mcp__paperless__download_original",
       "mcp__paperless__find_suspicious_ocr",
-      "Read(//work/ocr/**)",
-      "Read(//work/CLAUDE.md)"
+      "Read(//archivar/ocr/**)",
+      "Read(//archivar/CLAUDE.md)"
     ],
     "disableBypassPermissionsMode": "disable"
   },

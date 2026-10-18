@@ -20,7 +20,7 @@ const BASE = (process.env.PAPERLESS_URL || '').replace(/\/+$/, '');
 const TOKEN = process.env.PAPERLESS_TOKEN || '';
 // Schalter 'paperless_write' in der Add-on-Konfiguration (vom Supervisor, fuer den Agenten unerreichbar)
 const WRITE_ENABLED = process.env.PAPERLESS_WRITE === '1';
-const OCR_DIR = path.resolve(process.env.OCR_DIR || '/work/ocr');
+const OCR_DIR = path.resolve(process.env.OCR_DIR || '/archivar/ocr');
 const TAG_NEU = process.env.TAG_OCR_NEU || 'ocr-neu';
 const TAG_CLAUDE = process.env.TAG_OCR_CLAUDE || 'ocr-claude';
 const TZ = process.env.TZ || 'Europe/Berlin';

@@ -41,11 +41,11 @@ Add-on-Log beim Start.
 - `ha_write` fragt **jedes Mal** – das ist in den Managed Settings fest eingestellt und laesst
   sich in der App nicht auf „immer erlauben“ stellen. Vor dem Freigeben lesen, was geaendert wird.
 - Vor Aenderungen an Dashboards, Automationen, Skripten und Szenen legt `ha_write` den alten
-  Stand unter `/data/workspace/ha/backup/` ab. Zuruecksetzen: den Hausmeister bitten, die
+  Stand unter `/data/hausmeister/ha/backup/` ab. Zuruecksetzen: den Hausmeister bitten, die
   Sicherung zurueckzuschreiben.
 - Gesperrt, auch mit Freigabe: Benutzer/Anmeldung, Integrationen hinzufuegen/entfernen,
   Supervisor/Add-ons, Backups, Services `hassio.*` und `backup.*`.
-- Dateien aus `/data/workspace/ha/` (Konfigurationen, Sicherungen) schickt der Hausmeister auf
+- Dateien aus `/data/hausmeister/ha/` (Konfigurationen, Sicherungen) schickt der Hausmeister auf
   Wunsch mit `SendUserFile` in den Chat – nur an deine eigene App, ohne Freigabe.
 
 ## Firewall auswerten (learn → enforce)

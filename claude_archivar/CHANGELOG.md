@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.0
+- Claude Code 2.1.273 -> 2.1.292 (Stable-Kanal): bringt Claude Opus 5.5 (ab 2.1.280) in die
+  Modellauswahl der Claude-App
+- Arbeitsordner `/work` -> `/archivar`, damit der Agent in der Claude-App am Ordnernamen
+  erkennbar ist. Der Trust-Eintrag wird beim ersten Start uebernommen – keine neue Einrichtung
+  noetig. Read-/Edit-Regeln der Managed Settings auf den neuen Pfad umgestellt (gleiche Rechte)
+
 ## 0.1.3
 - Dokumente in der App anzeigen: Auf Wunsch schickt der Archivar das Original aus `/work/ocr/`
   mit dem Claude-Code-Werkzeug `SendUserFile` in den Chat (PDF/Bild mit Vorschau). Nur

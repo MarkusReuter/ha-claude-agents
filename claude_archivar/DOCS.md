@@ -118,7 +118,7 @@ Ein Julia-Dokument muss beim Lesen `404` liefern.
 | `search_documents` | Volltext + Datum/Tag/Korrespondent | ohne |
 | `list_documents_by_tag` | Dokumente mit einem Tag | ohne |
 | `get_document` | Metadaten und aktueller Inhalt | ohne |
-| `download_original` | Original nach `/work/ocr/<id>.<pdf/jpg/png/…>` (TIFF u. a.: Archiv-PDF) | ohne |
+| `download_original` | Original nach `/archivar/ocr/<id>.<pdf/jpg/png/…>` (TIFF u. a.: Archiv-PDF) | ohne |
 | `find_suspicious_ocr` | Heuristik ohne KI: leer, wenig Text/Seite, `Ã¤`-Umlaute, Sonderzeichen, Einzelbuchstaben | ohne |
 | `update_content` | sichert alten Inhalt als Notiz „Inhalt vor Claude-OCR (Datum)“, dann nur `content` | **jedes Mal** |
 | `set_ocr_tags` | nur die zwei OCR-Tags, andere Tags bleiben | **jedes Mal** |
@@ -127,7 +127,7 @@ Ein Julia-Dokument muss beim Lesen `404` liefern.
   auf „immer erlauben“ stellen. In der Freigabe von `update_content` steht der komplette neue Text.
 - Zuruecksetzen: Der alte Inhalt steht als Notiz am Dokument (Reiter **Notizen**) und kann in
   Paperless zurueckkopiert werden.
-- Heruntergeladene Originale liegen nur im Container (`/work/ocr`, nicht im HA-Backup), immer
+- Heruntergeladene Originale liegen nur im Container (`/archivar/ocr`, nicht im HA-Backup), immer
   nur eines, und werden nach `update_content` bzw. beim naechsten Download geloescht.
 - Geaendert wird nur das Inhaltsfeld (Suche/Anzeige). Die Textebene des Archiv-PDFs bleibt, wie sie ist.
 - Anzeigen in der App: Auf „zeig mir Dokument 1234“ laedt der Archivar das Original herunter und

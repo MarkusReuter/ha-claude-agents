@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.0
+- Claude Code 2.1.273 -> 2.1.292 (Stable-Kanal): bringt Claude Opus 5.5 (ab 2.1.280) in die
+  Modellauswahl der Claude-App. Managed Settings unveraendert
+- Arbeitsordner `/data/workspace` -> `/data/hausmeister`, damit der Agent in der Claude-App am
+  Ordnernamen erkennbar ist. Der alte Ordner (inkl. `ha/backup/`) wird beim ersten Start
+  verschoben und der Trust-Eintrag uebernommen – keine neue Einrichtung noetig. Pfade in
+  Managed Settings, MCP-Konfiguration und Rollenanweisung entsprechend angepasst (gleiche Rechte)
+
 ## 0.3.2
 - Dateien in der App anzeigen: Auf Wunsch schickt der Hausmeister Dateien aus
   `/data/workspace/ha/` mit dem Claude-Code-Werkzeug `SendUserFile` in den Chat. Nur

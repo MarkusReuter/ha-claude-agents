@@ -16,7 +16,7 @@ const HA_URL = (process.env.HA_URL || '').replace(/\/$/, '');
 const HA_TOKEN = process.env.HA_TOKEN || '';
 // Schalter 'ha_write' in der Add-on-Konfiguration (vom Supervisor, fuer den Agenten unerreichbar)
 const WRITE_ENABLED = process.env.HA_WRITE === '1';
-const FILES = path.resolve(process.env.HA_FILES_DIR || '/data/workspace/ha');
+const FILES = path.resolve(process.env.HA_FILES_DIR || '/data/hausmeister/ha');
 const MAX_CHARS = 40000;
 const TIMEOUT_MS = 60000;
 

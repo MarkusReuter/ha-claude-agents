@@ -15,6 +15,20 @@ chmod 0600 /data/options.json 2>/dev/null
 # CLAUDE.md noch .claude/ oder .mcp.json anlegen/aendern – sonst koennte er ueber
 # Projekt-Settings (Hooks, env, statusLine) das Bash-Verbot umgehen.
 install -d -o agent -g agent -m 0700 "$CONFIG_DIR"
+
+# Umzug aus einem frueheren Arbeitsordner (WORKSPACE_OLD in role.env): Inhalt verschieben und den
+# Trust-Eintrag uebernehmen, damit die Einrichtung nicht wiederholt werden muss. Die .claude.json
+# gehoert dem Agenten – deshalb bearbeitet er sie selbst (root folgt keinen Links in seinem Ordner).
+if [[ -n "${WORKSPACE_OLD:-}" && "$WORKSPACE_OLD" != "$WORKSPACE" ]]; then
+  if [[ -d "$WORKSPACE_OLD" && ! -L "$WORKSPACE_OLD" && ! -e "$WORKSPACE" ]]; then
+    mv "$WORKSPACE_OLD" "$WORKSPACE" && log "Arbeitsordner umgezogen: $WORKSPACE_OLD -> $WORKSPACE"
+  fi
+  as_agent bash -c 'umask 077; f="$1/.claude.json"; [[ -f "$f" && ! -L "$f" ]] || exit 1
+    jq -e --arg o "$2" --arg n "$3" ".projects[\$o] != null and .projects[\$n] == null" "$f" >/dev/null || exit 1
+    jq --arg o "$2" --arg n "$3" ".projects[\$n] = .projects[\$o]" "$f" > "$f.tmp" && mv "$f.tmp" "$f"' \
+    _ "$CONFIG_DIR" "$WORKSPACE_OLD" "$WORKSPACE" && log "Trust-Eintrag von $WORKSPACE_OLD fuer $WORKSPACE uebernommen."
+fi
+
 install -d -o root  -g agent -m "${WORKSPACE_MODE:-0755}" "$WORKSPACE"
 install -d -o root  -g root  -m 0755 "$WORKSPACE/.claude"
 install -o root -g root -m 0644 /opt/agent/CLAUDE.md "$WORKSPACE/CLAUDE.md"

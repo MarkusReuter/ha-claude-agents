@@ -115,7 +115,7 @@ Paperless-ngx per eigenem MCP `opt/agent-mcp/paperless.mjs` (Node, ohne Abhaengi
 | Paperless-Rechte | eigener Benutzer *archivar* ohne Loeschrecht (Gruppen Rolle/Freigabe getrennt, siehe DOCS.md). Sieht nur Dokumente, die fuer *Users für Markus Bereich* freigegeben sind – nicht Julias |
 | MCP-Server | sieben feste Werkzeuge; `request()` kennt nur eine Liste aus Methode+Pfad (GET, POST nur Notizen/OCR-Tags, PATCH nur Dokument), prueft die Bodies (`{content}` oder `{tags}`), folgt keinen Weiterleitungen, entfernt den Token aus allen Texten. Kein Loeschen, kein `bulk_edit` (Test prueft den Quelltext) |
 | Freigaben | Lese-Werkzeuge allow; `update_content`, `set_ocr_tags` ask (Managed); Option `paperless_write` (Standard aus) verbietet beide zusaetzlich |
-| Dateien | Workspace `/work` (nicht persistent, root 0755), Originale in `/work/ocr` (agent 0700), eines zur Zeit, nach `update_content` geloescht. Read nur `/work/ocr/**` und `/work/CLAUDE.md` – realisiert als Deny fuer alle anderen Hauptordner (Deny schlaegt Allow, eine „alles ausser“-Regel gibt es nicht) |
+| Dateien | Workspace `/archivar` (nicht persistent, root 0755), Originale in `/archivar/ocr` (agent 0700), eines zur Zeit, nach `update_content` geloescht. Read nur `/archivar/ocr/**` und `/archivar/CLAUDE.md` – realisiert als Deny fuer alle anderen Hauptordner (Deny schlaegt Allow, eine „alles ausser“-Regel gibt es nicht) |
 | Netz | Firewall-Ziel nur Host:Port aus `paperless_url` (intern `http://ca5234a0-paperless-ngx:80`, nicht die oeffentliche Adresse); kein HA-/Supervisor-Zugang |
 
 Grenze: Das Token-Recht „Dokument bearbeiten“ erlaubt in Paperless auch Drehen/Teilen/Mergen
@@ -125,7 +125,7 @@ ueber `bulk_edit`. Dagegen schuetzen nur der MCP-Server und das Fehlen jedes and
 Lokal verifiziert (Docker Desktop, 25.09.2026): Build ok (Claude Code 2.1.273, Node 22.23.3,
 poppler 25.03 – Claude Code ruft `pdftoppm` fuer PDF-Seiten auf); `enforce`: example.com blockiert,
 Paperless (ueber den Host-Port) und Anthropic erreichbar; agent kann `/data/options.json` und
-`/proc/1/environ` nicht lesen, nicht in `/work` schreiben; `claude mcp list`: `paperless ✔ Connected`;
+`/proc/1/environ` nicht lesen, nicht in `/work` (heute `/archivar`) schreiben; `claude mcp list`: `paperless ✔ Connected`;
 MCP-Aufruf gegen das echte Paperless mit ungueltigem Token: 401, Token nicht in der Ausgabe;
 nicht aufloesbarer Paperless-Host → Agent startet nicht. 31 Unit-Tests gruen.
 
@@ -139,7 +139,7 @@ fuer IMAPS (993) muss `firewall.sh` um Domain:Port erweitert werden.
 
 ## Dateien in der App anzeigen (Hausmeister 0.3.2 / Archivar 0.1.3)
 
-Claude Code (ab 2.1.196, hier 2.1.273) hat das Werkzeug `SendUserFile`: Es schickt eine Datei aus
+Claude Code (ab 2.1.196, hier 2.1.292) hat das Werkzeug `SendUserFile`: Es schickt eine Datei aus
 der Sitzung an den verbundenen Remote-Control-Client (Vorschau fuer PDF/Bilder mit
 `display: "render"`). Es braucht laut Doku keine Freigabe und steht in keiner Deny-Liste – die
 Rollen bekommen nur eine Anweisung in ihrer CLAUDE.md, wann sie es nutzen.
@@ -157,3 +157,15 @@ verweigert wird.
 
 - Sekretaer als weitere Kopie (gemeinsame Dateien per `tools/check-common.sh --sync`).
 - Hausmeister-Dockerfile ebenfalls auf eine feste Node-Version pinnen (Archivar: 22.23.3).
+
+## Arbeitsordner und Claude-Code-Version (Hausmeister 0.4.0, Archivar 0.2.0)
+
+Die Claude-App zeigt bei Remote-Control-Sitzungen den Namen des Projektordners. Deshalb heissen
+die Arbeitsordner wie die Rolle: `/data/hausmeister` (vorher `/data/workspace`) und `/archivar`
+(vorher `/work`). `run.sh` zieht einen vorhandenen alten Ordner einmalig um (`WORKSPACE_OLD` in
+`role.env`) und kopiert den Trust-Eintrag in der `.claude.json` – als Agent, weil die Datei ihm
+gehoert und root dort keinen Links folgen soll. Rechte und Regeln sind unveraendert, nur die Pfade.
+
+Claude Code 2.1.292 (Stable-Kanal, 18.10.2026): Opus 5.5 gibt es erst ab 2.1.280; mit 2.1.273 fehlte
+es in der Modellauswahl der App. Changelog 2.1.274–2.1.292 auf Managed Settings, Deny-Regeln und
+Remote Control geprueft – nur Fixes, keine Lockerung.
