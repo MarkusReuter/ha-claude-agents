@@ -1,8 +1,9 @@
 # Monatliches Update von Claude Code auf den Stable-Kanal (tools/update-claude-code.sh).
 # Ohne Pull Request: Ist eine neue Version da, werden Add-on-Versionen und CHANGELOG angepasst,
 # die Add-ons testweise gebaut und das Ergebnis direkt auf main gepusht. Home Assistant bietet
-# dann das Update mit dem Changelog an. Schlaegt Build oder Test fehl, wird nichts gepusht
-# (GitHub meldet den fehlgeschlagenen Lauf per Mail).
+# dann das Update mit dem Changelog an. Am Anfang des Eintrags steht ein Sicherheits-Siegel
+# (gruen/gelb/rot, siehe Skript). Bei Rot, oder wenn Build oder Test fehlschlagen, wird nichts
+# gepusht – GitHub meldet den fehlgeschlagenen Lauf per Mail.
 name: Claude-Code-Update
 
 on:
@@ -14,6 +15,10 @@ on:
         description: "Feste Version statt Stable (leer = Stable)"
         required: false
         default: ""
+      accept_red:
+        description: "Rotes Sicherheits-Siegel nach eigener Pruefung trotzdem ausrollen"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -30,6 +35,7 @@ jobs:
         id: upd
         env:
           VERSION: ${{ inputs.version }}
+          ACCEPT_RED: ${{ inputs.accept_red && '1' || '0' }}
         run: tools/update-claude-code.sh $VERSION
 
       - uses: actions/setup-node@v4

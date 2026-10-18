@@ -179,4 +179,13 @@ Patch-Version und schreibt einen CHANGELOG-Eintrag mit gefiltertem Auszug (neue 
 Remote Control, Sicherheit/Deny-Regeln/Managed Settings). Danach: check-common, Unit-Tests,
 `docker build` beider Add-ons (inkl. `claude --version`) – nur wenn alles gruen ist, Push direkt auf
 main. Bewusst ohne Pull Request: Geprueft wird der Changelog beim Update in Home Assistant.
+
+Sicherheits-Siegel am Anfang jedes automatischen Eintrags: Das Skript ordnet die Release Notes per
+Stichwort den Bausteinen des Sicherheitskonzepts zu (Managed Settings, Deny-Regeln, Freigabe-Modus,
+Hooks, MCP-Konfiguration, Projekt-Settings, Remote-Control-Optionen, Updater, neue und gesperrte
+Werkzeuge; Auto Mode nur, solange er nicht per `disableAutoMode` gesperrt ist). „Fixed“ zaehlt als
+Fehlerbehebung, Removed/Deprecated/„no longer“/„ignored“ als **rot** (kein Push, Lauf schlaegt fehl;
+nach eigener Pruefung manuell mit `accept_red`), alles andere als **gelb** (Push, Zeilen oben im
+Changelog). Ohne Treffer **gruen**. Grenze: Stichwortabgleich, keine Code-Pruefung – eine Aenderung,
+die einen Baustein betrifft, ohne ihn zu nennen, faellt durch.
 Bleibt ein Update dort liegen, laeuft das alte Image weiter.
