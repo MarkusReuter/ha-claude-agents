@@ -1,0 +1,51 @@
+# Test der Egress-Firewall wie unter HAOS: Container in einem eigenen Docker-Netz, d. h. DNS ueber
+# Dockers eingebauten Resolver 127.0.0.11 (der externe Anfragen aus dem Container-Netz heraus
+# weiterleitet). Prueft enforce aus Sicht des Agenten (UID 1000): Anthropic und das interne Ziel
+# erreichbar, alles andere (Name und IP) gesperrt.
+name: Firewall-Test
+
+on:
+  push:
+    paths:
+      - "claude_*/rootfs/usr/local/bin/firewall.sh"
+      - "claude_*/Dockerfile"
+      - ".github/workflows/firewall-test.yml"
+  workflow_dispatch:
+
+jobs:
+  enforce:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Image bauen (Archivar – internes Ziel kommt aus der Umgebung)
+        run: docker build -t fwtest claude_archivar
+
+      - name: Netz, internes Ziel und Agent-Container starten
+        run: |
+          docker network create fwnet
+          docker run -d --name intern --network fwnet python:3-alpine python -m http.server 80
+          docker run -d --name agent --network fwnet --cap-add NET_ADMIN --entrypoint sleep fwtest infinity
+          docker exec agent cat /etc/resolv.conf
+
+      - name: firewall.sh enforce
+        run: docker exec -e ALLOW_INTERNAL_EXTRA=intern:80 agent /usr/local/bin/firewall.sh enforce
+
+      - name: Pruefen als Agent (UID 1000)
+        run: |
+          set -u
+          as_agent() { docker exec agent setpriv --reuid=1000 --regid=1000 --clear-groups "$@"; }
+          fail=0
+          ok()    { if "$@" >/dev/null 2>&1; then echo "OK      $*"; else echo "FEHLER  $* (sollte gehen)"; fail=1; fi; }
+          nicht() { if "$@" >/dev/null 2>&1; then echo "FEHLER  $* (sollte gesperrt sein)"; fail=1; else echo "OK      gesperrt: $*"; fi; }
+          ok    as_agent getent ahostsv4 api.anthropic.com
+          ok    as_agent curl -sS -m10 -o /dev/null https://api.anthropic.com/
+          ok    as_agent curl -sS -m10 -o /dev/null https://claude.ai/
+          ok    as_agent curl -sS -m10 -o /dev/null http://intern:80/
+          nicht as_agent getent ahostsv4 example.com
+          nicht as_agent curl -sS -m5 -o /dev/null https://example.com/
+          nicht as_agent curl -sS -m5 -o /dev/null https://1.1.1.1/
+          nicht as_agent curl -sS -m5 -o /dev/null http://http-intake.logs.us5.datadoghq.com/
+          nicht as_agent getent ahostsv4 @1.1.1.1
+          docker exec agent nft list chain inet agentfw output
+          exit $fail
