@@ -8,6 +8,37 @@
   verschoben und der Trust-Eintrag uebernommen – keine neue Einrichtung noetig. Pfade in
   Managed Settings, MCP-Konfiguration und Rollenanweisung entsprechend angepasst (gleiche Rechte)
 
+Auszug aus dem Changelog von Claude Code 2.1.274 bis 2.1.292 (englisch):
+
+**Neue Modelle**
+- Added Claude Sonnet 5.5 (`claude-sonnet-5-5`), now the default Sonnet model on the Anthropic API — 1M context, $2/$10 per Mtok with $0.20/Mtok cache reads
+- Added Claude Opus 5.5 (`claude-opus-5-5`), now the default Opus model — 1M context, $4/$20 per Mtok with $0.20/Mtok cache reads
+
+**Neu bei Remote Control (Bedienung aus der App)**
+- Improved Remote Control's recovery from an expired server credential: sessions stay connected during renewal and are kept if it gives up after a server outage
+- Improved delivery of files Claude sends from cloud sessions and Remote Control: an upload that fails on a timeout, a network error or a 502, 503 or 504 is now retried once
+- Improved the explanation Claude gives when the server refuses a file it sends from a Remote Control or cloud session, such as an oversized image
+- Improved Remote Control: a `/btw` side question asked of a session hosted by an app such as Claude Desktop now sees the turn in progress, not only the last finished one
+- Changed `/claude-api` so it can no longer be run from Remote Control clients
+- Improved `claude remote-control`: in a folder you haven't trusted yet, it now asks for workspace trust on the terminal instead of exiting
+- Changed `/recap` to decline with a short notice when it arrives relayed from a chat thread (your own included) or from a routine or webhook; typed in the terminal, the Claude apps, Remote Control, `-p` or an SDK host, it runs as before
+- Improved the `/plugin` plugin and marketplace details menus and the `/remote-control` already-connected menu: they now support Home/End and clicking a row
+- … und 2 weitere
+
+**Sicherheit und Rechte**
+- Security: Fixed PreToolUse hook approvals and auto mode bypassing the permission prompt for file reads from network (UNC) paths
+- Fixed a spurious "could not be examined" note for @-words that name no file when a Read deny rule is set and the working directory is under a symlink
+- Added a warning when a managed settings file is a link to a file outside the managed settings folder
+- Added a /status and doctor warning when managed settings ignore user-configured sandbox allowRead paths or allowed domains
+- Fixed a project `CLAUDE.md`, rule or `AGENTS.md` symlinked outside the working directories loading under `permissions.blockReadsOutsideWorkingDirectories` or a `Read` deny rule
+- Fixed Read deny rules not applying to image paths pasted or dragged into the prompt, or to file names listed for an @-mentioned folder
+- Fixed slow or failed startup since 2.1.285 under SDK hosts such as the VS Code extension when managed settings deny reads of many paths on a slow filesystem (notably Windows drives under WSL)
+- Fixed Bash permission checks not applying Read deny rules or the outside-directory read block to a wildcard in some option values of read-only commands
+- … und 11 weitere
+
+Dazu 1563 weitere Aenderungen, vor allem Fehlerbehebungen sowie Terminal, IDE und andere
+Plattformen: [vollstaendiger Changelog](https://github.com/anthropics/claude-code/blob/main/CHANGELOG.md)
+
 ## 0.3.2
 - Dateien in der App anzeigen: Auf Wunsch schickt der Hausmeister Dateien aus
   `/data/workspace/ha/` mit dem Claude-Code-Werkzeug `SendUserFile` in den Chat. Nur
