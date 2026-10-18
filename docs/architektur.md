@@ -183,7 +183,14 @@ main. Bewusst ohne Pull Request: Geprueft wird der Changelog beim Update in Home
 Sicherheits-Siegel am Anfang jedes automatischen Eintrags: Das Skript ordnet die Release Notes per
 Stichwort den Bausteinen des Sicherheitskonzepts zu (Managed Settings, Deny-Regeln, Freigabe-Modus,
 Hooks, MCP-Konfiguration, Projekt-Settings, Remote-Control-Optionen, Updater, neue und gesperrte
-Werkzeuge; Auto Mode nur, solange er nicht per `disableAutoMode` gesperrt ist). „Fixed“ zaehlt als
+Werkzeuge; Auto Mode nur, solange er nicht per `disableAutoMode` gesperrt ist).
+
+Entscheidung 18.10.2026: **Auto Mode bleibt erlaubt** (kein `permissions.disableAutoMode`), Bypass
+bleibt gesperrt. Offen und nicht verifiziert: ob der Auto-Mode-Klassifikator Werkzeuge mit
+Managed-`ask`-Regel (`ha_write`, `update_content`, `set_ocr_tags`) selbst freigeben kann. Die
+Schreibsperren per Option (`ha_write`, `paperless_write`, Standard aus) wirken unabhaengig davon,
+weil sie die Werkzeuge verbieten und der MCP-Server Schreibbefehle zusaetzlich ablehnt. Folge fuers
+Siegel: Auto-Mode-Aenderungen machen es gelb. „Fixed“ zaehlt als
 Fehlerbehebung, Removed/Deprecated/„no longer“/„ignored“ als **rot** (kein Push, Lauf schlaegt fehl;
 nach eigener Pruefung manuell mit `accept_red`), alles andere als **gelb** (Push, Zeilen oben im
 Changelog). Ohne Treffer **gruen**. Grenze: Stichwortabgleich, keine Code-Pruefung – eine Aenderung,

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.1
+- Add-on-Log aufgeraeumt: Die Statusanzeige von `claude remote-control` wurde alle paar Sekunden
+  neu gezeichnet (zehntausende Zeilen pro Stunde). Jetzt ohne Steuerzeichen, Verbindung und
+  Kapazitaet nur bei Aenderung, Sitzungen und Hinweise einmal, jeweils mit Zeit und Praefix `rc:`.
+  Nur Ausgabe, keine Rechteaenderung
+
 ## 0.4.0
 - Claude Code 2.1.273 -> 2.1.292 (Stable-Kanal): bringt Claude Opus 5.5 (ab 2.1.280) in die
   Modellauswahl der Claude-App. Managed Settings unveraendert

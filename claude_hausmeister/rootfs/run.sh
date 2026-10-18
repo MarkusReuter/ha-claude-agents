@@ -81,6 +81,22 @@ fi
 
 pause() { sleep "$1" & child=$!; wait "$child"; child=0; }
 
+# Ausgabe von 'claude remote-control' fuers Add-on-Log. Die Statusanzeige wird alle paar Sekunden
+# neu gezeichnet (sonst zehntausende Zeilen pro Stunde): Steuerzeichen entfernen, Verbindungs- und
+# Kapazitaetszeile nur bei Aenderung, alle anderen Zeilen (Sitzungen, Hinweise, Fehler) beim ersten Mal.
+rc_log() {
+  ROLE="$ROLE" perl -ne '
+    BEGIN { $| = 1 }
+    s/\e\][^\a\e]*(?:\a|\e\\)//g; s/\e\[[0-9;?]*[A-Za-z]//g; s/[\r\n]//g;
+    s/^[^[:alnum:]\[]+//;  # Rahmen-/Spinnerzeichen am Anfang
+    next unless length;
+    my $k = /^Capacity:/ ? "cap" : /Connected|Connecting|Reconnect|Disconnected|offline/ ? "status" : "";
+    if ($k) { next if ($last{$k} // "") eq $_; $last{$k} = $_ }
+    else    { next if $seen{$_}++; %seen = ($_ => 1) if keys %seen > 500 }
+    my @t = localtime; printf "[%04d-%02d-%02d %02d:%02d:%02d] [%s] rc: %s\n",
+      $t[5] + 1900, $t[4] + 1, @t[3, 2, 1, 0], $ENV{ROLE}, $_;'
+}
+
 hinweis_gezeigt=0
 fast_fails=0
 while true; do
@@ -100,9 +116,9 @@ while true; do
   cmd=(claude remote-control --name "$SESSION_NAME" --spawn same-dir --capacity "$CAPACITY")
   if [[ "$USE_PTY" == "true" ]]; then
     # Pseudo-TTY; 'sleep infinity' haelt stdin offen, damit script kein EOF weiterreicht
-    sleep infinity | as_agent script -qfec "$(printf '%q ' "${cmd[@]}")" /dev/null &
+    sleep infinity | as_agent script -qfec "$(printf '%q ' "${cmd[@]}")" /dev/null > >(rc_log) 2>&1 &
   else
-    as_agent "${cmd[@]}" </dev/null &
+    as_agent "${cmd[@]}" </dev/null > >(rc_log) 2>&1 &
   fi
   child=$!; wait "$child"; rc=$?; child=0
   pkill -P $$ -x sleep 2>/dev/null   # stdin-Halter der PTY-Variante
