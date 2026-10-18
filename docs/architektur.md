@@ -169,3 +169,14 @@ gehoert und root dort keinen Links folgen soll. Rechte und Regeln sind unveraend
 Claude Code 2.1.292 (Stable-Kanal, 18.10.2026): Opus 5.5 gibt es erst ab 2.1.280; mit 2.1.273 fehlte
 es in der Modellauswahl der App. Changelog 2.1.274–2.1.292 auf Managed Settings, Deny-Regeln und
 Remote Control geprueft – nur Fixes, keine Lockerung.
+
+## Automatische Claude-Code-Updates
+
+`.github/workflows/claude-code-update.yml` laeuft am 1. jedes Monats (und manuell ueber
+*Actions > Claude-Code-Update > Run workflow*, optional mit fester Version). Ist der Stable-Kanal
+neuer als der Pin, hebt `tools/update-claude-code.sh` den Pin in allen Add-ons, erhoeht die
+Patch-Version und schreibt einen CHANGELOG-Eintrag mit gefiltertem Auszug (neue Modelle, Neues bei
+Remote Control, Sicherheit/Deny-Regeln/Managed Settings). Danach: check-common, Unit-Tests,
+`docker build` beider Add-ons (inkl. `claude --version`) – nur wenn alles gruen ist, Push direkt auf
+main. Bewusst ohne Pull Request: Geprueft wird der Changelog beim Update in Home Assistant.
+Bleibt ein Update dort liegen, laeuft das alte Image weiter.

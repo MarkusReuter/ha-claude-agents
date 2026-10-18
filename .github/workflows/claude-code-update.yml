@@ -1,0 +1,60 @@
+# Monatliches Update von Claude Code auf den Stable-Kanal (tools/update-claude-code.sh).
+# Ohne Pull Request: Ist eine neue Version da, werden Add-on-Versionen und CHANGELOG angepasst,
+# die Add-ons testweise gebaut und das Ergebnis direkt auf main gepusht. Home Assistant bietet
+# dann das Update mit dem Changelog an. Schlaegt Build oder Test fehl, wird nichts gepusht
+# (GitHub meldet den fehlgeschlagenen Lauf per Mail).
+name: Claude-Code-Update
+
+on:
+  schedule:
+    - cron: "17 4 1 * *"   # am 1. jedes Monats, 04:17 UTC
+  workflow_dispatch:       # manuell: Actions > Claude-Code-Update > Run workflow
+    inputs:
+      version:
+        description: "Feste Version statt Stable (leer = Stable)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency: claude-code-update
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Stable-Version pruefen und eintragen
+        id: upd
+        env:
+          VERSION: ${{ inputs.version }}
+        run: tools/update-claude-code.sh $VERSION
+
+      - uses: actions/setup-node@v4
+        if: steps.upd.outputs.changed == 'true'
+        with:
+          node-version: 22
+
+      - name: Pruefen (gemeinsame Dateien, Tests, Build mit claude --version)
+        if: steps.upd.outputs.changed == 'true'
+        run: |
+          tools/check-common.sh
+          node --test claude_archivar/tests/*.test.mjs
+          for addon in claude_*/; do
+            docker build -t "ci-${addon%/}" "$addon"
+          done
+
+      - name: Commit und Push
+        if: steps.upd.outputs.changed == 'true'
+        env:
+          OLD: ${{ steps.upd.outputs.old }}
+          NEW: ${{ steps.upd.outputs.new }}
+          ADDONS: ${{ steps.upd.outputs.addons }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Claude Code $OLD -> $NEW (automatisches Update)" -m "Add-ons: $ADDONS"
+          git push
