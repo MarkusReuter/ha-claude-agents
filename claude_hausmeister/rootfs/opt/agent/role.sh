@@ -20,6 +20,10 @@ role_prepare() {
 
   # Arbeitsdateien des MCP-Servers (Abrufe, bearbeitete Konfigurationen, automatische Sicherungen)
   install -d -o agent -g agent -m 0755 "$WORKSPACE/ha" "$WORKSPACE/ha/backup"
+  # Ergebnisse fuer Markus (ausgang/) und daraus gebaute Pakete (ausgang/pakete/, MCP-Server ablage).
+  # Aufraeumen: Dateien aelter als 30 Tage (-type f folgt keinen Links, loescht keine).
+  install -d -o agent -g agent -m 0700 "$WORKSPACE/ausgang" "$WORKSPACE/ausgang/pakete"
+  find "$WORKSPACE/ausgang" -xdev -type f -mtime +30 -delete 2>/dev/null || true
 
   log "Home Assistant: $([[ "$HA_WRITE" == "1" ]] && echo "lesen + SCHREIBEN (jede Aenderung mit Freigabe)" || echo "nur lesen (Option ha_write aus)")"
 }
