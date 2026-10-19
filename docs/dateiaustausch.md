@@ -161,3 +161,17 @@ Archivar-Inhalte gehen nur auf ausdruecklichen Wunsch in die Cloud – sie verla
 3. Je nach Ergebnis von 2: Deny fuer `/data/claude` aufteilen oder Weg 2 als „nur Bilder/Text“
    dokumentieren.
 4. Sekretaer: beim Bau gesondert entscheiden.
+
+## Nachtrag: Austausch-Repo `private-data` mit dem Architekten (19.10.2026)
+
+Hausmeister (`paket_hochladen`, ab 0.6.0) und Architekt (derselbe `ablage`-Server, ueber seinen
+GitHub-Proxy) legen Pakete gleich ab: Release `paket-<Datum>-<Thema>` in `private-data`, nach
+30 Tagen geloescht. Damit entsteht ein Kanal **Hausmeister → Architekt**: Der Architekt kann
+Hausmeister-Pakete lesen (z. B. Warmwasser-Daten fuer Bauthemen).
+
+Warum das mit dem Grundsatz vereinbar ist: Jeder Upload des Hausmeisters braucht Markus'
+Freigabe (`ask`) – das ist der Kurier-Schritt, Markus entscheidet, was in `private-data` landet.
+Die Gegenrichtung gibt es nicht: Der Hausmeister liest `private-data` nicht, Inhalte oder
+Injection aus dem Architekten (Internet) erreichen ihn also nicht. Folge fuer Markus: Was der
+Hausmeister hochlaedt, ist fuer einen Agenten mit Internet lesbar – Diagnosepakete deshalb
+weiterhin geschwaerzt, keine Anwesenheitsverlaeufe hochladen. Der Archivar bleibt aussen vor.

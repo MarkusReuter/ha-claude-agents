@@ -1,0 +1,23 @@
+{
+  "mcpServers": {
+    "ablage": {
+      "type": "stdio",
+      "command": "/usr/local/bin/node",
+      "args": [
+        "/opt/agent-mcp/ablage.mjs"
+      ],
+      "env": {
+        "ABLAGE_ROOT": "/data/architekt",
+        "ABLAGE_QUELLEN": ".",
+        "ABLAGE_ZIEL": "ausgang",
+        "ABLAGE_ROLLE": "Architekten",
+        "ABLAGE_MAX_MB": "25",
+        "ABLAGE_GITHUB_REPO": "${ABLAGE_GITHUB_REPO:-}",
+        "ABLAGE_GITHUB_TOKEN": "${ABLAGE_GITHUB_TOKEN:-}",
+        "ABLAGE_GITHUB_API": "http://127.0.0.1:8099/api",
+        "ABLAGE_GITHUB_UPLOADS": "http://127.0.0.1:8099/uploads",
+        "ABLAGE_HALTEN_TAGE": "30"
+      }
+    }
+  }
+}

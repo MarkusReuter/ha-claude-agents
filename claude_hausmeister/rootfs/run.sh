@@ -37,12 +37,16 @@ echo '{"mcpServers":{}}' > "$WORKSPACE/.mcp.json"; chown root:root "$WORKSPACE/.
 log "Start – Claude Code $(as_agent claude --version 2>&1 | head -1), Container $(container_name)"
 
 # Managed Settings (bei jedem Start aus der Vorlage im Image) und rollenspezifische Verzeichnisse,
-# siehe role_prepare in /opt/agent/role.sh. Ohne gueltige Settings mit Bash-Verbot startet der
-# Agent nicht (fail closed) – sonst liefe Claude Code ohne Sperren.
+# siehe role_prepare in /opt/agent/role.sh. Ohne gueltige Settings mit Bash-Verbot und
+# abgeschalteten claude.ai-Connectoren (Gmail, Drive, Kalender des Kontos – sensible Daten, die
+# keine Rolle braucht) startet der Agent nicht (fail closed). Rollen mit BASH_ERLAUBT=1 in
+# role.env (Architekt) brauchen nur die Connector-Sperre.
 install -d -o root -g root -m 0755 /etc/claude-code
 rm -f /etc/claude-code/managed-settings.json
 role_prepare
-if ! jq -e '.permissions.deny | index("Bash")' /etc/claude-code/managed-settings.json >/dev/null 2>&1; then
+settings_ok='.env.ENABLE_CLAUDEAI_MCP_SERVERS == "false" and (.permissions.deny | type == "array")'
+[[ "${BASH_ERLAUBT:-0}" == "1" ]] || settings_ok+=' and (.permissions.deny | index("Bash") != null)'
+if ! jq -e "$settings_ok" /etc/claude-code/managed-settings.json >/dev/null 2>&1; then
   log "Managed Settings fehlen oder sind ungueltig – Agent wird NICHT gestartet."
   exec sleep infinity
 fi
@@ -67,6 +71,9 @@ on_term() {
   exit 0
 }
 trap on_term TERM INT
+
+# Rollenspezifische Hintergrunddienste (Architekt: GitHub-Proxy), PIDs landen in children
+if declare -F role_start >/dev/null; then role_start; fi
 
 # Einrichtungs-Terminal (Ingress) – nur wenn gewuenscht und der Eingangsfilter steht
 if [[ "$SETUP_TERMINAL" == "true" ]]; then

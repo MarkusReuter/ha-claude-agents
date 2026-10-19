@@ -7,6 +7,10 @@
 #             Umgebung, z. B. wenn eine Add-on-Option einen Dienst einschaltet), interne Ziele (role.env ALLOW_INTERNAL plus
 #             ALLOW_INTERNAL_EXTRA aus der Umgebung, z. B. aus einer Add-on-Option) und DNS ueber dnsmasq;
 #             dnsmasq loest nur noch erlaubte Domains auf (schliesst den DNS-Kanal)
+# Mit EGRESS=internet in role.env (Architekt) gilt statt der Allowlist: Internet frei (IPv4),
+# gesperrt sind private/lokale Netze (LAN, hassio-Netz mit HA, Supervisor und anderen Add-ons) und
+# IPv6 (globale IPv6-Adressen im Heimnetz lassen sich nicht von Internet-Zielen unterscheiden).
+# learn sperrt dann nichts und protokolliert Ziele im lokalen Netz in 'waere_blockiert'.
 # Unabhaengig vom Modus: Einrichtungs-Terminal (ttyd) nur vom Ingress-Proxy erreichbar.
 # Exit != 0 heisst: Regeln nicht (vollstaendig) gesetzt.
 set -euo pipefail
@@ -28,6 +32,10 @@ TTYD_PORT=7681
 INGRESS_IP=172.30.32.2     # Supervisor (Ingress-Proxy) im hassio-Netz
 ANTHROPIC_NET=160.79.104.0/23
 ORIG_RESOLV=/etc/resolv.conf.orig
+EGRESS="${EGRESS:-allowlist}"
+[[ "$EGRESS" == "allowlist" || "$EGRESS" == "internet" ]] || { log "EGRESS ungueltig: $EGRESS"; exit 1; }
+# Nicht oeffentliche IPv4-Netze (RFC 1918, CGNAT, Link-Local, Benchmark, Multicast, reserviert)
+LOCAL_NETS="0.0.0.0/8, 10.0.0.0/8, 100.64.0.0/10, 169.254.0.0/16, 172.16.0.0/12, 192.0.0.0/24, 192.0.2.0/24, 192.168.0.0/16, 198.18.0.0/15, 198.51.100.0/24, 203.0.113.0/24, 224.0.0.0/4, 240.0.0.0/4"
 
 # Idempotent: alten Stand entfernen, urspruenglichen Resolver wiederherstellen
 nft delete table inet agentfw 2>/dev/null || true
@@ -70,7 +78,17 @@ for entry in ${ALLOW_INTERNAL:-} $EXTRA; do
   log "intern erlaubt: $host ($ip) Port $port"
 done
 
-if [[ "$MODE" == "enforce" ]]; then
+LEARN='update @waere_blockiert { ip daddr . meta l4proto . th dport } counter accept comment "waere-blockiert"'
+EGRESS_RULES=""
+if [[ "$EGRESS" == "internet" ]]; then
+  if [[ "$MODE" == "enforce" ]]; then
+    EGRESS_RULES="    ip daddr { $LOCAL_NETS } counter reject with icmpx type admin-prohibited
+    meta nfproto ipv6 counter reject with icmpx type admin-prohibited"
+  else
+    EGRESS_RULES="    ip daddr { $LOCAL_NETS } $LEARN"
+  fi
+  FINAL='counter accept comment "internet"'
+elif [[ "$MODE" == "enforce" ]]; then
   FINAL='counter reject with icmpx type admin-prohibited'
 else
   FINAL='meta nfproto ipv4 update @waere_blockiert { ip daddr . meta l4proto . th dport }
@@ -99,6 +117,7 @@ table inet agentfw {
     ip daddr $ANTHROPIC_NET tcp dport 443 accept
     ip daddr @allow4 tcp dport 443 accept
 $INTERNAL_RULES
+$EGRESS_RULES
     $FINAL
   }
 }
@@ -113,7 +132,11 @@ DNSMASQ_ARGS=(--keep-in-foreground --no-resolv --no-hosts
               --listen-address=127.0.0.1 --bind-interfaces --user=root
               --cache-size=500 --max-cache-ttl=300 --filter-AAAA
               --nftset="$NFTSET_SPEC" --log-facility=-)
-if [[ "$MODE" == "enforce" ]]; then
+if [[ "$EGRESS" == "internet" ]]; then
+  # Alle Namen, aber keine Antworten mit privaten Adressen (DNS-Rebinding aufs Heimnetz)
+  DNSMASQ_ARGS+=(--server="$UPSTREAM_DNS" --stop-dns-rebind)
+  [[ "$MODE" == "enforce" ]] || DNSMASQ_ARGS+=(--log-queries)
+elif [[ "$MODE" == "enforce" ]]; then
   # Nur erlaubte Domains und interne Namen werden weitergeleitet, alles andere: REFUSED
   for d in $ALLOW_DOMAINS "${INTERNAL_HOSTS[@]}"; do DNSMASQ_ARGS+=(--server="/$d/$UPSTREAM_DNS"); done
 else
@@ -124,7 +147,11 @@ sleep 1
 pgrep -x dnsmasq >/dev/null || { log "dnsmasq startet nicht"; exit 1; }
 { echo "nameserver 127.0.0.1"; [[ -n "$SEARCH_LINE" ]] && echo "$SEARCH_LINE"; } > /etc/resolv.conf
 
-if [[ "$MODE" == "enforce" ]]; then
+if [[ "$EGRESS" == "internet" && "$MODE" == "enforce" ]]; then
+  log "ENFORCE – Internet (IPv4) frei, lokale Netze und IPv6 gesperrt."
+elif [[ "$EGRESS" == "internet" ]]; then
+  log "LEARN – nichts blockiert, auch nicht das lokale Netz. Auswertung: firewall-status"
+elif [[ "$MODE" == "enforce" ]]; then
   log "ENFORCE – nur Allowlist erlaubt ($ALLOW_DOMAINS, $ANTHROPIC_NET)."
 else
   log "LEARN – nichts blockiert. Auswertung: firewall-status"

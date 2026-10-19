@@ -8,6 +8,7 @@ on:
   push:
     paths:
       - "claude_*/rootfs/usr/local/bin/firewall.sh"
+      - "claude_*/rootfs/opt/agent/role.env"
       - "claude_*/Dockerfile"
       - ".github/workflows/firewall-test.yml"
   workflow_dispatch:
@@ -53,5 +54,54 @@ jobs:
           nicht as_agent curl -sS -m5 -o /dev/null https://example.com/
           nicht as_agent curl -sS -m5 -o /dev/null https://1.1.1.1/
           nicht as_agent curl -sS -m5 -o /dev/null http://http-intake.logs.us5.datadoghq.com/
+          docker exec agent nft list chain inet agentfw output
+          exit $fail
+
+  # Architekt (EGRESS=internet): Internet frei, lokales Netz gesperrt
+  internet:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        dns: [host, extern]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Image bauen (Architekt)
+        run: docker build -t fwtest claude_architekt
+
+      - name: Netz, internes Ziel und Agent-Container starten
+        run: |
+          docker network create fwnet
+          docker run -d --name intern --network fwnet python:3-alpine python -m http.server 80
+          dnsopt=(); [[ "${{ matrix.dns }}" == extern ]] && dnsopt=(--dns 8.8.8.8)
+          docker run -d --name agent --network fwnet "${dnsopt[@]}" --cap-add NET_ADMIN --entrypoint sleep fwtest infinity
+          docker exec agent cat /etc/resolv.conf
+
+      - name: firewall.sh enforce
+        run: docker exec agent /usr/local/bin/firewall.sh enforce
+
+      - name: Pruefen als Agent (UID 1000)
+        run: |
+          set -u
+          as_agent() { docker exec agent setpriv --reuid=1000 --regid=1000 --clear-groups "$@"; }
+          fail=0
+          ok()    { if "$@" >/dev/null 2>&1; then echo "OK      $*"; else echo "FEHLER  $* (sollte gehen)"; fail=1; fi; }
+          nicht() { if "$@" >/dev/null 2>&1; then echo "FEHLER  $* (sollte gesperrt sein)"; fail=1; else echo "OK      gesperrt: $*"; fi; }
+          intern_ip=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' intern)
+          gateway=$(docker network inspect -f '{{range .IPAM.Config}}{{.Gateway}}{{end}}' fwnet)
+          ok    as_agent getent ahostsv4 example.com
+          ok    as_agent curl -sS -m10 -o /dev/null https://example.com/
+          ok    as_agent curl -sS -m10 -o /dev/null https://api.anthropic.com/
+          ok    as_agent curl -sS -m10 -o /dev/null https://github.com/
+          ok    as_agent curl -sS -m10 -o /dev/null https://registry.npmjs.org/
+          nicht as_agent curl -sS -m5 -o /dev/null http://intern:80/
+          nicht as_agent curl -sS -m5 -o /dev/null "http://$intern_ip:80/"
+          nicht as_agent curl -sS -m5 -o /dev/null "http://$gateway/"
+          nicht as_agent curl -sS -m5 -o /dev/null http://192.168.178.1/
+          nicht as_agent curl -sS -m5 -o /dev/null http://10.0.0.1/
+          nicht as_agent curl -sS -m5 -o /dev/null http://169.254.169.254/
+          nicht as_agent curl -sS -m5 -o /dev/null http://supervisor/
+          nicht as_agent getent ahostsv4 localtest.me
           docker exec agent nft list chain inet agentfw output
           exit $fail

@@ -30,11 +30,13 @@ ALLOW_DOMAINS_EXTRA=""
 # Rollenspezifisch: Optionen auswerten, AGENT_ENV fuellen, role_prepare() definieren
 source /opt/agent/role.sh
 
-# Befehl als 'agent' ausfuehren: eigene UID, keine Capabilities, keine Rechteausweitung, saubere Umgebung
+# Befehl als 'agent' ausfuehren: eigene UID, keine Capabilities, keine Rechteausweitung, saubere Umgebung.
+# ENABLE_CLAUDEAI_MCP_SERVERS=false: keine claude.ai-Connectoren des Kontos (Gmail, Drive, Kalender)
 as_agent() {
   local envs=(HOME=/home/agent USER=agent LOGNAME=agent SHELL=/bin/bash
               PATH=/usr/local/bin:/usr/bin:/bin LANG=C.UTF-8 TERM="${TERM:-xterm-256color}"
               TZ="${TZ:-Europe/Berlin}" CLAUDE_CONFIG_DIR="$CONFIG_DIR" DISABLE_AUTOUPDATER=1
+              ENABLE_CLAUDEAI_MCP_SERVERS=false
               ROLE="$ROLE" SESSION_NAME="$SESSION_NAME" SETUP_MARKER="$SETUP_MARKER"
               WORKSPACE="$WORKSPACE" "${AGENT_ENV[@]}")
   setpriv --reuid=1000 --regid=1000 --clear-groups \

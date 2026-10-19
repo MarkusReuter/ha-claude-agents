@@ -47,7 +47,7 @@ jobs:
         if: steps.upd.outputs.changed == 'true'
         run: |
           tools/check-common.sh
-          node --test claude_archivar/tests/*.test.mjs claude_hausmeister/tests/*.test.mjs
+          node --test claude_archivar/tests/*.test.mjs claude_hausmeister/tests/*.test.mjs claude_architekt/tests/*.test.mjs
           for addon in claude_*/; do
             docker build -t "ci-${addon%/}" "$addon"
           done

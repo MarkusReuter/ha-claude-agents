@@ -16,12 +16,18 @@ COMMON=(
   rootfs/usr/local/bin/firewall.sh
   rootfs/usr/local/bin/firewall-status
 )
+# Nur in Rollen, die sie haben (Hausmeister, Architekt): ebenfalls identisch halten
+OPTIONAL=(
+  rootfs/opt/agent-mcp/ablage.mjs
+)
 
 rc=0
 for addon in claude_*/; do
   addon=${addon%/}
   [[ "$addon" == "$REF" || ! -f "$addon/config.yaml" ]] && continue
-  for f in "${COMMON[@]}"; do
+  files=("${COMMON[@]}")
+  for f in "${OPTIONAL[@]}"; do [[ -f "$addon/$f" ]] && files+=("$f"); done
+  for f in "${files[@]}"; do
     if ! cmp -s "$REF/$f" "$addon/$f"; then
       if [[ "${1:-}" == "--sync" ]]; then
         cp "$REF/$f" "$addon/$f"; echo "synchronisiert: $addon/$f"

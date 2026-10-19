@@ -1,0 +1,61 @@
+#!/bin/bash
+# Gefuehrte Einrichtung, laeuft bereits als Nutzer 'agent' (im Ingress-Terminal oder per agent-shell).
+set -uo pipefail
+cd "$WORKSPACE"
+# Strg+C soll nur das laufende Programm beenden, nicht dieses Skript
+trap 'echo' INT
+
+logged_in() { [[ -s "$CLAUDE_CONFIG_DIR/.credentials.json" ]]; }
+trusted() {
+  [[ "$(jq -r --arg p "$WORKSPACE" '.projects[$p].hasTrustDialogAccepted // false' \
+        "$CLAUDE_CONFIG_DIR/.claude.json" 2>/dev/null)" == "true" ]]
+}
+status() {
+  echo "Status: Ordner vertraut $(trusted && echo ok || echo FEHLT) · Login $(logged_in && echo ok || echo FEHLT)" \
+       "· Dauerbetrieb $([[ -f "$SETUP_MARKER" ]] && echo freigegeben || echo "nicht freigegeben")"
+}
+frage() { read -rp "  $1 " a; echo "$a"; }
+
+cat <<TXT
+
+=== Einrichtung "$SESSION_NAME" (Nutzer: $(id -un), Ordner: $WORKSPACE) ===
+$(status)
+TXT
+
+# Schritt 1 so lange, bis Trust und Login gespeichert sind (oder bewusst uebersprungen)
+while ! trusted || ! logged_in; do
+  cat <<TXT
+
+Schritt 1 – Anmelden
+  Startet 'claude'. Im Trust-Dialog mit Pfeil runter auf "Yes, I trust this folder", Enter.
+  Dann /login mit dem PRIVATEN Pro-Konto (Link oeffnen, Code hier einfuegen), danach /exit.
+TXT
+  [[ "$(frage '[Enter] = starten, s = ueberspringen:')" == "s" ]] && break
+  claude
+  echo; status
+done
+
+if trusted && logged_in; then
+  cat <<TXT
+
+Schritt 2 – Remote Control freischalten (nur beim ersten Mal noetig)
+  Startet 'claude remote-control'. "Enable Remote Control?" mit y bestaetigen.
+  Sobald die Session-URL erscheint: Strg+C. Den Dauerbetrieb startet danach das Add-on selbst.
+TXT
+  if [[ "$(frage '[Enter] = starten, s = ueberspringen:')" != "s" ]]; then
+    claude remote-control --name "$SESSION_NAME (Einrichtung)"
+    if [[ "$(frage 'Wurde die Session-URL angezeigt? [j/N]')" =~ ^[jJ]$ ]]; then
+      touch "$SETUP_MARKER"
+      echo "  OK – das Add-on startet '$SESSION_NAME' innerhalb einer Minute."
+    fi
+  fi
+fi
+
+cat <<TXT
+
+$(status)
+Du bist jetzt in einer Shell als 'agent' (fuer Tests, z. B. curl -m5 https://example.com).
+Fenster einfach schliessen oder 'exit'. Danach im Add-on 'setup_terminal' wieder ausschalten.
+TXT
+trap - INT
+exec bash --noprofile --norc -i

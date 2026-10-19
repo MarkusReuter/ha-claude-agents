@@ -28,7 +28,8 @@ const MAX_MB = Number(process.env.ABLAGE_MAX_MB || 25);
 const DEFAULT_MB = Math.min(10, MAX_MB);
 const MAX_INPUT = 500 * 1024 * 1024;
 const MAX_FILES = 5000;
-// GitHub (nur fuer paket_hochladen). API-Adressen nur fuer Tests ueberschreibbar (managed-mcp.json setzt sie nicht).
+// GitHub (nur fuer paket_hochladen). API-Adressen ueberschreibbar: in Tests und beim Architekten, der
+// ueber seinen GitHub-Proxy auf 127.0.0.1 hochlaedt (der Token liegt dort, ABLAGE_GITHUB_TOKEN ist nur ein Platzhalter).
 const GH_REPO = process.env.ABLAGE_GITHUB_REPO || '';
 const GH_TOKEN = process.env.ABLAGE_GITHUB_TOKEN || '';
 const GH_API = (process.env.ABLAGE_GITHUB_API || 'https://api.github.com').replace(/\/$/, '');

@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.6.2
+- **claude.ai-Connectoren aus** (Gmail, Google Drive, Google Kalender des Pro-Kontos): Sie koennen
+  ueber den Login geladen werden (ob `managed-mcp.json` sie erfasst, ist nicht belegt) und haetten
+  dem Agenten Mails und Dateien geliefert, die er nicht braucht (beim Archivar: fremde Inhalte + sensible Daten neben Paperless).
+  Sicherheitsrelevant: `ENABLE_CLAUDEAI_MCP_SERVERS=false` in Managed Settings und Umgebung, dazu
+  Deny fuer `mcp__claude_ai_Gmail/Google_Drive/Google_Calendar`. run.sh startet den Agenten nur,
+  wenn die Sperre in den Managed Settings steht (fail closed)
+- Gemeinsame Dateien fuer die neue Rolle Architekt, ohne Aenderung fuer dieses Add-on:
+  `firewall.sh` kennt `EGRESS=internet` aus `role.env` (hier nicht gesetzt, also weiter
+  Allowlist), `run.sh` startet optionale Hintergrunddienste (`role_start`); das Bash-Verbot bleibt
+  Startbedingung
+
 ## 0.6.1
 - `paket_erstellen` nennt als naechsten Schritt `paket_hochladen`, wenn das Hochladen eingerichtet
   ist (vorher immer `SendUserFile`, das in normalen Sitzungen ablehnt); sonst wie bisher `SendUserFile`

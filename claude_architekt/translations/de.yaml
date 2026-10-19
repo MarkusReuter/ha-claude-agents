@@ -1,0 +1,30 @@
+configuration:
+  firewall_mode:
+    name: Firewall-Modus
+    description: >-
+      enforce = Internet frei, lokales Netz (HA, Paperless, Router, andere Add-ons) und IPv6 gesperrt ·
+      learn = nichts blockieren, Zugriffe ins lokale Netz nur protokollieren (nur zur Fehlersuche)
+  setup_terminal:
+    name: Einrichtungs-Terminal
+    description: >-
+      Web-Terminal (Web-UI) fuer Login und Tests. Nach der Einrichtung ausschalten.
+  github_owner:
+    name: GitHub-Konto
+    description: >-
+      Nur Repos dieses Kontos laufen ueber den Proxy mit Token (z. B. MarkusReuter).
+  github_token:
+    name: GitHub-Token
+    description: >-
+      Fine-grained Personal Access Token (alle Repos des Kontos; Contents, Pull requests, Issues
+      lesen/schreiben; KEIN Workflows-Recht). Nur der Proxy liest ihn, nie der Agent.
+  austausch_repo:
+    name: Austausch-Repo
+    description: >-
+      Repo fuer den Datenaustausch (z. B. private-data). Nur hier darf der Agent direkt auf main
+      pushen und Releases mit Dateien anlegen. In allen anderen Repos nur Branches claude/* und
+      Pull Requests. Leer = kein Austausch-Repo.
+  pty:
+    name: Pseudo-Terminal
+    description: >-
+      Remote-Control-Server in einem Pseudo-Terminal starten. Nur einschalten, falls er
+      ohne Terminal nicht laeuft.

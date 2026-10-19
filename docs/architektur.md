@@ -2,6 +2,40 @@
 
 Ergaenzt `uebergabe.md`. Hier steht, was gebaut ist und wo es vom Entwurf abweicht.
 
+## Grundregel: Rule of Two
+
+Jeder Agent hat hoechstens zwei der drei Eigenschaften – nie alle drei ungeschuetzt:
+
+- **A** – liest nicht vertrauenswuerdige Inhalte (Internet, Mails, Dokumente Dritter,
+  Entitaetszustaende aus fremden Quellen) → Prompt Injection moeglich
+- **B** – hat Zugriff auf sensible Daten oder Systeme (HA, Paperless, Postfach, Tokens, Login)
+- **C** – kann schreiben, Zustand aendern oder nach aussen kommunizieren
+
+Hat ein Agent A und B, ist C entweder nicht vorhanden oder an eine Freigabe durch Markus
+gebunden (Managed-`ask`). Dateien an Markus selbst (`SendUserFile`, eigener Ausgangsordner)
+zaehlen nicht als C. Jede neue Faehigkeit – Werkzeug, Domain in der Firewall, Ordner-Mapping,
+Add-on – wird vor dem Einbau gegen A/B/C geprueft und die Begruendung hier festgehalten.
+
+| Agent | A | B | C |
+|---|---|---|---|
+| Hausmeister | Entitaetszustaende | HA, `HA_TOKEN` | nur `ha_write` mit Freigabe |
+| Archivar | Dokumente, Mails | Paperless | keins (nur `update_content`/`set_ocr_tags` mit Freigabe) |
+| Architekt | Internet, Pakete, fremde Repos | eigene GitHub-Repos (privat, nicht sensibel), Claude-Login | Internet frei; GitHub nur `claude/*` ueber Proxy, Merge durch Markus; Austausch-Repo frei |
+
+Folge: **kein `Bash`.** Eine Shell bringt C ungefiltert mit (`curl` mit dem Token aus der
+Umgebung an HA/Paperless, Upload ueber erlaubte Domains, Lesen des Logins) und hebelt die
+Freigabe aus. Allowlists einzelner Befehle helfen nicht (`zip -TT`, `tar --checkpoint-action`,
+`find -exec` starten beliebige Befehle). Neue Faehigkeiten kommen als schmale MCP-Werkzeuge.
+
+**Bewusste Ausnahme: Architekt** (Entscheidung Markus, 19.10.2026). Ein Coding-Agent braucht
+Bash, und mit Internet-Vollzugriff ist C nicht an eine Freigabe zu binden. Er hat damit alle drei
+Eigenschaften – wie Anthropics Cloud-Sitzungen, an denen er sich orientiert. Ausgeglichen wird
+das, indem B klein bleibt und C dort eng ist, wo es Schaden anrichtet: kein HA/Paperless/LAN,
+keine Mail/Drive (claude.ai-Connectoren aus), kein Token beim Agenten, GitHub-Schreiben nur auf
+`claude/*` (und im Austausch-Repo `private-data`). Restrisiko: Abfluss von Repo-Inhalten und des
+Claude-Logins – akzeptiert, weil die Repos private, aber keine sensiblen Daten enthalten (Markus,
+19.10.2026); sensible Unterlagen bleiben in Paperless. Details unten.
+
 ## Schutzschichten (Hausmeister)
 
 1. **Managed Settings** `/etc/claude-code/managed-settings.json` (root, im Image):
@@ -198,3 +232,49 @@ nach eigener Pruefung manuell mit `accept_red`), alles andere als **gelb** (Push
 Changelog). Ohne Treffer **gruen**. Grenze: Stichwortabgleich, keine Code-Pruefung – eine Aenderung,
 die einen Baustein betrifft, ohne ihn zu nennen, faellt durch.
 Bleibt ein Update dort liegen, laeuft das alte Image weiter.
+
+## Architekt (0.1.0)
+
+Lokaler Ersatz fuer Claude-Code-Cloud-Sitzungen, fuer Code und Bauthemen in den Repos. Name und
+Arbeitsordner `/data/architekt` unterscheiden ihn in der Claude-App. Vorbild ist Anthropics Aufbau: Wegwerf-Umgebung
+ohne Zugangsdaten, Git ueber einen Proxy, Push nur auf den Sitzungs-Branch.
+
+| Schicht | Umsetzung |
+|---|---|
+| Shell | `Bash` erlaubt (`BASH_ERLAUBT=1` in `role.env`): run.sh verlangt dann nur die Connector-Sperre, nicht das Bash-Verbot. `managed-mcp.json` leer (exklusiv) |
+| Netz | `EGRESS=internet`: `enforce` sperrt private IPv4-Netze (RFC 1918 inkl. hassio-Netz 172.30.32.0/23, CGNAT, Link-Local, Multicast, reserviert) und IPv6 ganz – globale IPv6-Adressen im Heimnetz sind von Internet-Zielen nicht zu unterscheiden. DNS weiter nur ueber dnsmasq, jetzt fuer alle Namen, aber `--stop-dns-rebind`. Option `firewall_mode` ohne `off` |
+| GitHub-Token | Nur beim Proxy `opt/github-proxy/proxy.mjs`, Nutzer `gitproxy` (UID 1001). Token als Datei `/run/github-proxy/token` (0600 gitproxy), nicht als Argument (`/proc/*/cmdline` ist fuer alle lesbar). Der Agent kann fremde Prozesse weder lesen noch signalisieren (keine Capabilities, andere UID) |
+| Git | `/etc/gitconfig` (root) leitet `https://github.com/<owner>/` per `insteadOf` auf `http://127.0.0.1:8099/git/<owner>/` um. Der Proxy liest bei `git-receive-pack` die Befehlsliste (pkt-line) und leitet nur weiter, wenn **alle** Refs `refs/heads/claude/*` sind (bzw. `refs/heads/*` im Austausch-Repo, dort ohne Loeschen). Sonst Antwort im receive-pack-Format mit `ng` je Ref, damit git die Begruendung zeigt. Tags per git nie |
+| REST-API | Auswahl: GET `/user/repos` und unter `/repos/<owner>/…` (ohne secrets/variables/keys/hooks/environments), POST pulls, PATCH pulls (nur title/body/state), POST issues und Kommentare. Nur im Austausch-Repo: Release anlegen (nur Tag `paket-*`, Felder wie `paket_hochladen`), Release loeschen, Tag `paket-*` loeschen, Upload ueber `/uploads/…` → uploads.github.com (gestreamt). Kein GraphQL (also kein `gh`), kein Merge, keine Contents-/Refs-API, kein Workflow-Dispatch |
+| Austausch-Repo | Option `austausch_repo` (Standard `private-data`): Datenaustausch mit Markus – Push auf alle Branches, Dateien als Paket wie beim Hausmeister: derselbe `ablage.mjs` (gemeinsame Datei, `check-common.sh` prueft sie, wo vorhanden) mit `ABLAGE_GITHUB_API/UPLOADS` auf den Proxy und Platzhalter-Token. `paket_hochladen` ohne `ask`, weil Bash denselben Weg ohnehin hat. Geprueft 19.10.2026: `private-data` hat keine Workflows und keine Actions-Secrets, Tags/Releases starten dort also nichts. Kommt dort ein Workflow mit Secrets dazu, muss das neu bewertet werden |
+| Werkzeuge | `/data/architekt/.werkzeuge` (`TOOLS_DIR`, agent-eigen, `backup_exclude`): Flutter, JDK, Android-SDK, npm -g, Caches. `PATH`, `JAVA_HOME`, `ANDROID_HOME`, `PUB_CACHE`, `GRADLE_USER_HOME` kommen ueber `AGENT_ENV` (spaeteres `PATH=` in `env -i` gewinnt). root legt den Ordner nur an, wenn er fehlt, und entfernt einen Link an seiner Stelle (kein chown durch Links) |
+| Token-Rechte | Fine-grained, alle Repos des Kontos (auch kuenftige), Contents/PRs/Issues rw, Actions r. **Kein Workflows-Recht**: sonst liefe ein im Branch angelegter Workflow mit den Repo-Secrets |
+| Workspace | `/data/architekt` persistent, root-eigen 1775; `backup_exclude` fuer node_modules, .venv, build usw. |
+
+Warum ein Proxy statt Branch-Schutz: GitHub Free bietet fuer private Repos weder Branch-Schutz
+noch Rulesets (API: 403 „Upgrade to GitHub Pro“). Ein Token mit Contents-Schreibrecht duerfte
+sonst auf `main` pushen, Tags setzen (paperless-go: `v*`-Tag startet den Release-Build mit den
+Signier-Secrets) und Releases anlegen.
+
+Getestet (lokal, 19.10.2026): 25 Tests (inkl. Ende-zu-Ende `paket_hochladen` → Proxy → Mock-GitHub) in `claude_architekt/tests/` – Unit-Tests fuer pkt-line,
+Ref-Regeln und API-Auswahl, dazu der echte git-Client ueber den Proxy gegen ein Fake-GitHub mit
+`git http-backend`: clone, Push `claude/*`, Ablehnung von `main`/Tag/gemischtem Push, grosser
+Push (Probe-Request + chunked), Austausch-Repo, Release-Upload (2 MB, gestreamt), fremder Owner,
+Token in keiner Antwort/keinem Log.
+CI: `firewall-test.yml` Job `internet` (Internet erreichbar, Docker-Netz/LAN/Link-Local gesperrt).
+
+**Offen, nur auf HAOS pruefbar:** Image-Build und RAM, `--stop-dns-rebind` mit dem HA-DNS,
+Proxy-Start als gitproxy, Push/PR/Release gegen das echte GitHub, Flutter-Download und
+`flutter test` von paperless-go, Remote Control mit Bash in der App.
+
+## claude.ai-Connectoren aus (alle Rollen, Hausmeister 0.4.3 / Archivar 0.2.3 / Architekt 0.1.0)
+
+Mit dem Pro-Login kann Claude Code die Connectoren des Kontos laden (Gmail, Google Drive,
+Google Kalender). Ob die exklusive `managed-mcp.json` sie erfasst, ist nicht belegt. Keine Rolle
+braucht sie; beim Archivar waeren Mails A+B neben Paperless, beim Architekten B zu Shell und
+Internet. Abgeschaltet dreifach: `ENABLE_CLAUDEAI_MCP_SERVERS=false` in den Managed Settings
+(`env`) und in `as_agent` (agent-common.sh), dazu Deny fuer `mcp__claude_ai_Gmail`,
+`mcp__claude_ai_Google_Drive`, `mcp__claude_ai_Google_Calendar`. run.sh startet keinen Agenten,
+dessen Managed Settings die Sperre nicht enthalten. Claude Code 2.1.302 kennt ausserdem die
+Einstellung `disableClaudeAiConnectors` – erst nutzen, wenn der Pin sie sicher enthaelt.
+**Offen:** in der App mit `/mcp` pruefen, dass keine `claude.ai …`-Server mehr erscheinen.
