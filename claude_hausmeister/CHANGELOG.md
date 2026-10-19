@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.1
+- `paket_erstellen` nennt als naechsten Schritt `paket_hochladen`, wenn das Hochladen eingerichtet
+  ist (vorher immer `SendUserFile`, das in normalen Sitzungen ablehnt); sonst wie bisher `SendUserFile`
+- Mehr als 20 Teile: `paket_erstellen` sagt, in wie vielen Aufrufen hochzuladen ist, statt dass
+  `paket_hochladen` am Limit scheitert; Rollenanweisung entsprechend ergaenzt
+- Kommentar in role.sh berichtigt: Der GitHub-Token steht in der Umgebung aller Prozesse als agent,
+  nutzbar ist er nur fuer den Ablage-Server (kein Bash, kein Read auf /proc). Keine Aenderung der Rechte
+
 ## 0.6.0
 - Neues Werkzeug `paket_hochladen` (MCP-Server `ablage`): laedt Pakete als Anhang eines Releases in
   ein **privates** GitHub-Repo und liefert den Link fuer den Chat – die Claude-App nimmt in normalen

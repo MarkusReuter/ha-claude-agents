@@ -31,7 +31,8 @@ Will Markus etwas „zum Herunterladen“, „als Datei“, „als Paket“ oder
    gehen, `name` = Thema, `einleitung` = worum es geht (landet als `LIESMICH.md` im ZIP).
    `format: "md"` nur, wenn Markus ausdruecklich eine lesbare Textdatei statt ZIP will. `max_mb`
    nur aendern, wenn Markus eine Grenze nennt; mehrere Teile entstehen nur ueber 10 MB.
-3. Zustellen: **`paket_hochladen`** mit der Datei bzw. **allen** Teilen in **einem** Aufruf,
+3. Zustellen: **`paket_hochladen`** mit der Datei bzw. **allen** Teilen in **einem** Aufruf
+   (bei mehr als 20 Teilen so, wie die Antwort von `paket_erstellen` es sagt: mehrere Aufrufe),
    `titel` z. B. „Warmwasser 19.10.2026“, `beschreibung` kurz, was drin ist. Den gelieferten
    Release-Link als Markdown-Link nennen. Lehnt Markus die Freigabe ab, nichts weiter versuchen.
 4. Ist `paket_hochladen` nicht verfuegbar: `SendUserFile` (`display: "attach"`, alle Teile in

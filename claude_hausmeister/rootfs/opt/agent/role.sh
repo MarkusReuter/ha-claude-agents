@@ -7,7 +7,10 @@ AGENT_ENV+=(HA_WRITE="$HA_WRITE")
 if [[ -n "$HA_TOKEN" ]]; then AGENT_ENV+=(HA_URL=http://supervisor/core HA_TOKEN="$HA_TOKEN"); fi
 
 # Hochladen in ein privates GitHub-Repo (paket_hochladen): nur mit Repo UND Token. Dann – und nur
-# dann – ist github.com in der Firewall frei. Den Token sieht nur der Ablage-MCP-Server.
+# dann – ist github.com in der Firewall frei. Der Token steht (wie HA_TOKEN) in der Umgebung von
+# Claude Code und damit aller Prozesse als agent (MCP-Server, agent-shell). Benutzen kann ihn nur
+# der Ablage-MCP-Server: Der Agent hat kein Bash und kein Read auf /proc, kommt an die Umgebung
+# also nicht heran.
 ABLAGE_GITHUB_REPO=$(opt ablage_github_repo "")
 ABLAGE_GITHUB_TOKEN=$(opt ablage_github_token "")
 ABLAGE_UPLOAD=0

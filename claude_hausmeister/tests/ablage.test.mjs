@@ -78,6 +78,15 @@ before(async () => {
 });
 after(() => { proc.kill(); fs.rmSync(tmp, { recursive: true, force: true }); });
 
+describe('Zustellen ohne eingerichtetes Hochladen', () => {
+  test('nennt SendUserFile, nicht paket_hochladen', async () => {
+    const r = await call({ dateien: ['ausgang/bericht.md', 'ha/abruf/states.json'], name: 'ohne' });
+    assert.equal(r.error, false, r.text);
+    assert.match(r.text, /Jetzt mit SendUserFile schicken \(display: "attach"\)/);
+    assert.doesNotMatch(r.text, /paket_hochladen/);
+  });
+});
+
 describe('Werkzeugliste', () => {
   test('Werkzeuge paket_erstellen und paket_hochladen', async () => {
     const r = await rpc('tools/list', {});

@@ -51,8 +51,9 @@ rollenneutral, ohne Netz) mehrere Dateien zusammen:
   Binaerdateien werden uebergangen, grosse Dateien in Abschnitte geteilt.
 - Groessengrenze je Teil `max_mb` (Standard 10, hoechstens 25 – unter der Upload-Grenze von
   claude.ai). Erst wenn sie ueberschritten ist, entstehen `…-teil1von3.zip` usw.
-- Ergebnis unter `ausgang/pakete/`, nie ueberschrieben (`wx`), danach alle Teile in einem
-  `SendUserFile`-Aufruf.
+- Ergebnis unter `ausgang/pakete/`, nie ueberschrieben (`wx`). Die Antwort nennt den naechsten
+  Schritt: `paket_hochladen`, wenn eingerichtet (je Aufruf hoechstens 20 Dateien), sonst alle Teile
+  in einem `SendUserFile`-Aufruf.
 - Grenzen des Werkzeugs: nur regulaere Dateien unter den Quellordnern (`ABLAGE_QUELLEN`), keine
   Symlinks, Pruefung auf dem echten Pfad, keine eigenen Pakete erneut. Warum im MCP-Server und nicht
   per Write durch den Agenten: Zusammenkopieren per Write kostet Kontingent, ist bei grossen Dateien

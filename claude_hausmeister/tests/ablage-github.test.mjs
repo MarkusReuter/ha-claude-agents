@@ -7,6 +7,7 @@ import http from 'node:http';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
@@ -52,8 +53,8 @@ function startServer(env) {
     return new Promise((resolve) => pending.set(id, resolve));
   };
   servers.push(proc);
-  return async (args) => {
-    const r = await rpc('tools/call', { name: 'paket_hochladen', arguments: args });
+  return async (args, name = 'paket_hochladen') => {
+    const r = await rpc('tools/call', { name, arguments: args });
     return { error: !!r.result.isError, text: r.result.content[0].text };
   };
 }
@@ -189,5 +190,31 @@ describe('paket_hochladen', () => {
     assert.equal(r.error, true);
     assert.match(r.text, /401/);
     assert.doesNotMatch(r.text, /github_pat_falsch999/);
+  });
+
+  test('mehr als 20 Dateien: abgelehnt mit Hinweis auf mehrere Aufrufe', async () => {
+    const r = await upload({ dateien: Array.from({ length: 21 }, (_, i) => `ausgang/x${i}.zip`), titel: 'x' });
+    assert.equal(r.error, true);
+    assert.match(r.text, /Hoechstens 20 Dateien je Upload – auf mehrere Aufrufe verteilen/);
+    assert.equal(requests.length, 0);
+  });
+});
+
+describe('paket_erstellen mit eingerichtetem Hochladen', () => {
+  test('nennt paket_hochladen statt SendUserFile', async () => {
+    put('ausgang/a.md', 'A'); put('ausgang/b.md', 'B');
+    const r = await upload({ dateien: ['ausgang/a.md', 'ausgang/b.md'], name: 'zwei' }, 'paket_erstellen');
+    assert.equal(r.error, false, r.text);
+    assert.match(r.text, /Jetzt mit paket_hochladen hochladen\./);
+    assert.doesNotMatch(r.text, /SendUserFile/);
+    const eins = await upload({ dateien: ['ausgang/a.md'] }, 'paket_erstellen');
+    assert.match(eins.text, /Direkt mit paket_hochladen hochladen:/);
+  });
+
+  test('mehr als 20 Teile: Hochladen in mehreren Aufrufen', async () => {
+    for (let i = 0; i < 22; i++) put(`ausgang/viele/d${i}.bin`, crypto.randomBytes(40000));
+    const r = await upload({ dateien: ['ausgang/viele'], name: 'viele', max_mb: 0.05 }, 'paket_erstellen');
+    assert.equal(r.error, false, r.text);
+    assert.match(r.text, /in 2 Aufrufen zu je hoechstens 20 Dateien/);
   });
 });

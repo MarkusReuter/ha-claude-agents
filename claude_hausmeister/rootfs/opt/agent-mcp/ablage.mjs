@@ -37,6 +37,15 @@ const KEEP_DAYS = Number(process.env.ABLAGE_HALTEN_TAGE || 30);
 const TAG_PREFIX = 'paket-';
 const UPLOAD_MAX = 100 * 1024 * 1024;
 const UPLOAD_MAX_FILES = 20;
+const UPLOAD = Boolean(GH_REPO && GH_TOKEN); // sonst verbieten die Managed Settings paket_hochladen
+
+// Naechster Schritt fuer n fertige Dateien – hochladen, wenn eingerichtet, sonst SendUserFile
+function zustellen(n) {
+  if (!UPLOAD) return `mit SendUserFile schicken (${n > 1 ? 'alle in einem Aufruf, ' : ''}display: "attach")`;
+  if (n > UPLOAD_MAX_FILES) return `mit paket_hochladen hochladen – in ${Math.ceil(n / UPLOAD_MAX_FILES)} Aufrufen zu je `
+    + `hoechstens ${UPLOAD_MAX_FILES} Dateien, Titel jeweils mit „(k/${Math.ceil(n / UPLOAD_MAX_FILES)})“`;
+  return `mit paket_hochladen hochladen${n > 1 ? ' (alle in einem Aufruf)' : ''}`;
+}
 
 const bytes = (s) => Buffer.byteLength(s, 'utf8');
 const kb = (n) => n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(1)} KB` : `${(n / 1048576).toFixed(1)} MB`;
@@ -339,7 +348,7 @@ async function ghRequest(method, url, { json, body, type } = {}) {
 
 function uploadFiles(entries) {
   if (!Array.isArray(entries) || !entries.length) throw new Error('dateien: mindestens eine Datei angeben');
-  if (entries.length > UPLOAD_MAX_FILES) throw new Error(`Hoechstens ${UPLOAD_MAX_FILES} Dateien je Upload`);
+  if (entries.length > UPLOAD_MAX_FILES) throw new Error(`Hoechstens ${UPLOAD_MAX_FILES} Dateien je Upload – auf mehrere Aufrufe verteilen`);
   const realSources = SOURCES.filter((s) => fs.existsSync(s)).map((s) => fs.realpathSync(s));
   const names = new Set();
   return entries.map((raw) => {
@@ -439,7 +448,7 @@ function paketErstellen(args) {
   const files = collect(args.dateien);
   // Nur eine Datei, die in die Grenze passt, und kein Format gewuenscht: nichts packen, direkt schicken
   if (files.length === 1 && args.format === undefined && files[0].data.length <= mb * 1048576) {
-    return `Nur eine Datei – kein Paket noetig. Direkt mit SendUserFile schicken (display: "attach"):\n`
+    return `Nur eine Datei – kein Paket noetig. Direkt ${zustellen(1)}:\n`
       + `- ${path.join(ROOT, files[0].rel)} (${kb(files[0].data.length)})`;
   }
   const now = new Date();
@@ -459,7 +468,7 @@ function paketErstellen(args) {
   return `${files.length - skipped.length} Dateien in ${written.length} ${written.length === 1 ? 'Datei' : 'Teilen'} (Grenze ${mb} MB):\n`
     + written.map((w) => `- ${w.file} (${kb(w.size)}, ${w.count} ${format === 'zip' ? (w.count === 1 ? 'Datei' : 'Dateien') : (w.count === 1 ? 'Abschnitt' : 'Abschnitte')})`).join('\n')
     + (skipped.length ? `\nNicht enthalten (Binaerdateien, dafuer format "zip"): ${skipped.join(', ')}` : '')
-    + `\nJetzt alle Teile in einem SendUserFile-Aufruf schicken (files: [...], display: "attach").`;
+    + `\nJetzt ${zustellen(written.length)}.`;
 }
 
 const TOOLS = [{
@@ -470,7 +479,7 @@ const TOOLS = [{
     + 'eigenstaendiges ZIP; einzelne zu grosse Dateien werden in Stuecke geteilt. format "md" nur auf Wunsch: '
     + 'eine Markdown-Datei mit allen Textdateien. '
     + `Erlaubt sind Dateien unter ${SOURCES.join(', ')}. `
-    + `Ergebnis unter ${TARGET}, danach mit SendUserFile schicken.`,
+    + `Ergebnis unter ${TARGET}, danach ${zustellen(1)}.`,
   inputSchema: {
     type: 'object',
     required: ['dateien'],
