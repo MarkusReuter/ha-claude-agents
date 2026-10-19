@@ -49,7 +49,8 @@ fi
 chown root:root /etc/claude-code/managed-settings.json; chmod 0644 /etc/claude-code/managed-settings.json
 
 # Egress-Firewall. enforce schlaegt fehl -> Agent startet nicht (fail closed).
-if ! ALLOW_INTERNAL_EXTRA="$ALLOW_INTERNAL_EXTRA" /usr/local/bin/firewall.sh "$FIREWALL_MODE"; then
+if ! ALLOW_INTERNAL_EXTRA="$ALLOW_INTERNAL_EXTRA" ALLOW_DOMAINS_EXTRA="$ALLOW_DOMAINS_EXTRA" \
+     /usr/local/bin/firewall.sh "$FIREWALL_MODE"; then
   if [[ "$FIREWALL_MODE" == "enforce" ]]; then
     log "Firewall (enforce) konnte nicht eingerichtet werden – Agent wird NICHT gestartet."
     exec sleep infinity

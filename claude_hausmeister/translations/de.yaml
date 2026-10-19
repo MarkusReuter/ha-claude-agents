@@ -13,6 +13,17 @@ configuration:
     description: >-
       Erlaubt dem Hausmeister Aenderungen (Dashboards, Automationen, Helfer, Schalten) –
       jede einzeln mit Freigabe. Aus = nur lesen. Wirkt nach Neustart des Add-ons.
+  ablage_github_repo:
+    name: Ablage-Repo (GitHub)
+    description: >-
+      Privates Repo als besitzer/name, in das der Hausmeister Pakete als Release-Anhang hochlaedt
+      (ohne Git-Historie, Loeschung nach 30 Tagen). Leer = kein Hochladen. Oeffentliche Repos
+      werden abgelehnt.
+  ablage_github_token:
+    name: Ablage-Token (GitHub)
+    description: >-
+      Fine-grained Token nur fuer dieses eine Repo, Recht „Contents: Read and write“, mit
+      Ablaufdatum. Jedes Hochladen braucht deine Freigabe.
   pty:
     name: Pseudo-Terminal
     description: >-

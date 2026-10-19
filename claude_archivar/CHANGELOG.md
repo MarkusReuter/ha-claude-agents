@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.3
+- Gemeinsame Dateien abgeglichen (run.sh, firewall.sh, agent-common.sh): Firewall kennt zusaetzliche
+  Domains aus `ALLOW_DOMAINS_EXTRA` (fuer das Ablage-Repo des Hausmeisters). Der Archivar setzt sie
+  nicht – keine Aenderung an Verhalten oder Rechten
+
 ## 0.2.2
 - Firewall `enforce` unter HAOS repariert: Docker leitet DNS-Anfragen ueber seinen eingebauten
   Resolver aus dem Container-Netz heraus an den HA-DNS weiter; diese Anfragen (als root) blockierte

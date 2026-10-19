@@ -3,7 +3,8 @@
 #   off     – kein Egress-Filter (nur zum ersten Ausprobieren)
 #   learn   – nichts wird blockiert; DNS-Anfragen werden geloggt, Ziele, die enforce
 #             blockieren wuerde, landen im Set 'waere_blockiert' (firewall-status zeigt es)
-#   enforce – nur erlaubte Domains (TCP 443), interne Ziele (role.env ALLOW_INTERNAL plus
+#   enforce – nur erlaubte Domains (TCP 443; role.env ALLOW_DOMAINS plus ALLOW_DOMAINS_EXTRA aus der
+#             Umgebung, z. B. wenn eine Add-on-Option einen Dienst einschaltet), interne Ziele (role.env ALLOW_INTERNAL plus
 #             ALLOW_INTERNAL_EXTRA aus der Umgebung, z. B. aus einer Add-on-Option) und DNS ueber dnsmasq;
 #             dnsmasq loest nur noch erlaubte Domains auf (schliesst den DNS-Kanal)
 # Unabhaengig vom Modus: Einrichtungs-Terminal (ttyd) nur vom Ingress-Proxy erreichbar.
@@ -11,8 +12,17 @@
 set -euo pipefail
 MODE="${1:-learn}"
 EXTRA="${ALLOW_INTERNAL_EXTRA:-}"
+DOMAINS_EXTRA="${ALLOW_DOMAINS_EXTRA:-}"
 source /opt/agent/role.env
 log() { echo "[firewall] $*"; }
+# Zusaetzliche Domains nur in schlichter Form (keine Leer-/Sonderzeichen fuer dnsmasq/nft)
+for d in $DOMAINS_EXTRA; do
+  if [[ "$d" =~ ^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$ ]]; then
+    ALLOW_DOMAINS+=" $d"
+  else
+    log "Ungueltige Domain in ALLOW_DOMAINS_EXTRA ignoriert: $d"
+  fi
+done
 
 TTYD_PORT=7681
 INGRESS_IP=172.30.32.2     # Supervisor (Ingress-Proxy) im hassio-Netz

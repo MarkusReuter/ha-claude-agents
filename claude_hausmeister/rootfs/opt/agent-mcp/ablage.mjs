@@ -1,9 +1,15 @@
-// MCP-Server (stdio): Dateien aus dem Arbeitsordner zu einem Paket fuer Markus zusammenfassen.
-// Ohne Abhaengigkeiten, ohne Netz. Rollenneutral – Quellen und Ziel kommen aus der Umgebung.
+// MCP-Server (stdio): Dateien aus dem Arbeitsordner zu einem Paket fuer Markus zusammenfassen und
+// auf Wunsch in ein privates GitHub-Repo hochladen. Ohne Abhaengigkeiten. Rollenneutral – Quellen,
+// Ziel und Repo kommen aus der Umgebung.
 //
 //   paket_erstellen – packt Dateien zu einem ZIP (Standard) oder auf Wunsch einer Markdown-Datei
-//                     und teilt das Ergebnis in mehrere Teile, wenn es groesser als max_mb wird. Die Teile landen unter ABLAGE_ZIEL/pakete/ und gehen per SendUserFile
-//                     in die App.
+//                     und teilt das Ergebnis in mehrere Teile, wenn es groesser als max_mb wird.
+//                     Die Teile landen unter ABLAGE_ZIEL/pakete/. Kein Netz.
+//   paket_hochladen – laedt Dateien als Anhaenge eines Releases in EIN festes GitHub-Repo
+//                     (ABLAGE_GITHUB_REPO) – ohne Commit, also ohne Git-Historie. Nur wenn das Repo
+//                     privat ist. Releases mit Tag paket-* werden nach ABLAGE_HALTEN_TAGE geloescht.
+//                     Per Managed Settings immer mit Rueckfrage; ohne Repo/Token verboten.
+//                     Einziger Netzzugriff des Servers (ghRequest), nur zu GH_API/GH_UPLOADS.
 //
 // Der Server laeuft als 'agent' und koennte technisch alles lesen, was der Agent-Nutzer lesen darf
 // (z. B. den Claude-Login). Deshalb nur regulaere Dateien unter ABLAGE_QUELLEN, keine Symlinks,
@@ -22,6 +28,15 @@ const MAX_MB = Number(process.env.ABLAGE_MAX_MB || 25);
 const DEFAULT_MB = Math.min(10, MAX_MB);
 const MAX_INPUT = 500 * 1024 * 1024;
 const MAX_FILES = 5000;
+// GitHub (nur fuer paket_hochladen). API-Adressen nur fuer Tests ueberschreibbar (managed-mcp.json setzt sie nicht).
+const GH_REPO = process.env.ABLAGE_GITHUB_REPO || '';
+const GH_TOKEN = process.env.ABLAGE_GITHUB_TOKEN || '';
+const GH_API = (process.env.ABLAGE_GITHUB_API || 'https://api.github.com').replace(/\/$/, '');
+const GH_UPLOADS = (process.env.ABLAGE_GITHUB_UPLOADS || 'https://uploads.github.com').replace(/\/$/, '');
+const KEEP_DAYS = Number(process.env.ABLAGE_HALTEN_TAGE || 30);
+const TAG_PREFIX = 'paket-';
+const UPLOAD_MAX = 100 * 1024 * 1024;
+const UPLOAD_MAX_FILES = 20;
 
 const bytes = (s) => Buffer.byteLength(s, 'utf8');
 const kb = (n) => n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(1)} KB` : `${(n / 1048576).toFixed(1)} MB`;
@@ -287,6 +302,130 @@ function buildZip(files, { name, budget, einleitung, created }) {
   });
 }
 
+// ---------------------------------------------------------------- GitHub-Release (paket_hochladen)
+const hide = (t) => (GH_TOKEN ? String(t).split(GH_TOKEN).join('***') : String(t));
+
+async function ghRequest(method, url, { json, body, type } = {}) {
+  if (!url.startsWith(GH_API + '/') && !url.startsWith(GH_UPLOADS + '/')) throw new Error('Ziel nicht erlaubt');
+  let res;
+  try {
+    res = await fetch(url, {
+      method,
+      redirect: 'manual', // keinen Weiterleitungen folgen (Token bliebe sonst im Header)
+      headers: {
+        Authorization: `Bearer ${GH_TOKEN}`,
+        Accept: 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+        'User-Agent': 'ha-claude-agents-ablage',
+        ...(json !== undefined ? { 'Content-Type': 'application/json' } : {}),
+        ...(body !== undefined ? { 'Content-Type': type || 'application/octet-stream' } : {}),
+      },
+      body: json !== undefined ? JSON.stringify(json) : body,
+      signal: AbortSignal.timeout(300000),
+    });
+  } catch (e) {
+    throw new Error(hide(`GitHub nicht erreichbar: ${e.cause?.code || e.message}`));
+  }
+  const text = await res.text();
+  let data; try { data = text ? JSON.parse(text) : null; } catch { data = text; }
+  if (!res.ok) {
+    const msg = typeof data === 'object' && data ? [data.message, ...(data.errors || []).map((x) => x.message || x.code)].filter(Boolean).join('; ') : text;
+    const err = new Error(hide(`GitHub ${res.status}: ${String(msg).slice(0, 300)}`));
+    err.status = res.status;
+    throw err;
+  }
+  return data;
+}
+
+function uploadFiles(entries) {
+  if (!Array.isArray(entries) || !entries.length) throw new Error('dateien: mindestens eine Datei angeben');
+  if (entries.length > UPLOAD_MAX_FILES) throw new Error(`Hoechstens ${UPLOAD_MAX_FILES} Dateien je Upload`);
+  const realSources = SOURCES.filter((s) => fs.existsSync(s)).map((s) => fs.realpathSync(s));
+  const names = new Set();
+  return entries.map((raw) => {
+    if (typeof raw !== 'string' || !raw.trim()) throw new Error('dateien: nur Pfade als Text');
+    const rel = path.isAbsolute(raw) ? path.relative(ROOT, raw) : raw;
+    if (rel.split(/[\\/]/).includes('..')) throw new Error(`${raw}: '..' ist nicht erlaubt`);
+    const p = path.resolve(ROOT, rel);
+    if (!SOURCES.some((s) => inside(p, s))) throw new Error(`${raw}: nur Dateien unter ${SOURCES.map((s) => path.relative(ROOT, s) + '/').join(', ')}`);
+    if (!fs.existsSync(p)) throw new Error(`${raw}: nicht gefunden`);
+    const st = fs.lstatSync(p);
+    if (st.isSymbolicLink()) throw new Error(`${raw}: Symlinks sind nicht erlaubt`);
+    if (!st.isFile()) throw new Error(`${raw}: keine Datei (Ordner vorher mit paket_erstellen packen)`);
+    if (!realSources.some((s) => inside(fs.realpathSync(p), s))) throw new Error(`${raw}: liegt ausserhalb der erlaubten Ordner`);
+    if (st.size > UPLOAD_MAX) throw new Error(`${raw}: groesser als ${kb(UPLOAD_MAX)}`);
+    const name = path.basename(p);
+    if (names.has(name)) throw new Error(`${raw}: Dateiname doppelt`);
+    names.add(name);
+    return { name, data: fs.readFileSync(p) };
+  });
+}
+
+const MIME = { zip: 'application/zip', md: 'text/markdown', csv: 'text/csv', json: 'application/json',
+               txt: 'text/plain', yaml: 'text/yaml', yml: 'text/yaml', png: 'image/png', jpg: 'image/jpeg', pdf: 'application/pdf' };
+
+async function aufraeumen(repoUrl) {
+  const grenze = Date.now() - KEEP_DAYS * 86400000;
+  const geloescht = [];
+  const releases = await ghRequest('GET', `${repoUrl}/releases?per_page=100`);
+  for (const r of releases || []) {
+    if (!String(r.tag_name).startsWith(TAG_PREFIX) || Date.parse(r.created_at) > grenze) continue;
+    await ghRequest('DELETE', `${repoUrl}/releases/${r.id}`);
+    await ghRequest('DELETE', `${repoUrl}/git/refs/tags/${encodeURIComponent(r.tag_name)}`).catch(() => {});
+    geloescht.push(r.tag_name);
+  }
+  return geloescht;
+}
+
+async function paketHochladen(args) {
+  if (!GH_REPO || !GH_TOKEN) throw new Error('Hochladen ist nicht eingerichtet (Add-on-Optionen ablage_github_repo/ablage_github_token).');
+  if (!/^[A-Za-z0-9-]+\/[A-Za-z0-9._-]+$/.test(GH_REPO)) throw new Error('ABLAGE_GITHUB_REPO ungueltig');
+  const titel = String(args.titel || '').trim();
+  if (!titel || titel.length > 100) throw new Error('titel: 1 bis 100 Zeichen');
+  const files = uploadFiles(args.dateien);
+  const repoUrl = `${GH_API}/repos/${GH_REPO}`;
+
+  const repo = await ghRequest('GET', repoUrl);
+  if (repo?.private !== true) throw new Error(`${GH_REPO} ist nicht privat – Hochladen verweigert (Releases waeren oeffentlich).`);
+
+  let hinweis = '';
+  try {
+    const weg = await aufraeumen(repoUrl);
+    if (weg.length) hinweis = `\nAufgeraeumt (aelter als ${KEEP_DAYS} Tage): ${weg.join(', ')}`;
+  } catch (e) { hinweis = `\nAufraeumen fehlgeschlagen: ${e.message}`; }
+
+  const slug = titel.toLowerCase().normalize('NFKD').replace(/[^\w]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'paket';
+  const tag = `${TAG_PREFIX}${new Date().toISOString().replace(/[-:]/g, '').replace('T', '-').slice(0, 15)}-${slug}`;
+  let release;
+  try {
+    release = await ghRequest('POST', `${repoUrl}/releases`, { json: {
+      tag_name: tag, name: titel, make_latest: 'false',
+      body: `${String(args.beschreibung || '').trim()}\n\nHochgeladen vom ${ROLE}. Wird nach ${KEEP_DAYS} Tagen automatisch geloescht.`.trim(),
+    } });
+  } catch (e) {
+    if (e.status === 422 && /empty/i.test(e.message)) throw new Error(`${GH_REPO} ist leer – einmal eine README anlegen (ein Commit noetig fuer den Tag).`);
+    throw e;
+  }
+  const assets = [];
+  try {
+    for (const f of files) {
+      const ext = path.extname(f.name).slice(1).toLowerCase();
+      const a = await ghRequest('POST', `${GH_UPLOADS}/repos/${GH_REPO}/releases/${release.id}/assets?name=${encodeURIComponent(f.name)}`,
+                                { body: f.data, type: MIME[ext] || 'application/octet-stream' });
+      assets.push({ name: a.name, size: a.size, url: a.browser_download_url });
+    }
+  } catch (e) {
+    // Halbe Releases nicht stehen lassen
+    await ghRequest('DELETE', `${repoUrl}/releases/${release.id}`).catch(() => {});
+    await ghRequest('DELETE', `${repoUrl}/git/refs/tags/${encodeURIComponent(tag)}`).catch(() => {});
+    throw new Error(`Hochladen abgebrochen, nichts gespeichert: ${e.message}`);
+  }
+  return `Hochgeladen nach ${GH_REPO} (privat), Release „${titel}“:\n${release.html_url}\n`
+    + assets.map((a) => `- [${a.name}](${a.url}) (${kb(a.size)})`).join('\n')
+    + `\nLoeschung automatisch nach ${KEEP_DAYS} Tagen.${hinweis}\n`
+    + 'Markus den Release-Link als Markdown-Link nennen.';
+}
+
 // ---------------------------------------------------------------- Werkzeug
 function paketErstellen(args) {
   const name = String(args.name || 'paket');
@@ -345,6 +484,21 @@ const TOOLS = [{
       einleitung: { type: 'string', description: 'Markdown-Text an den Anfang (Teil 1 bzw. LIESMICH.md), z. B. Ziel und Fehlerbild' },
     },
   },
+}, {
+  name: 'paket_hochladen',
+  description: `Laedt fertige Dateien (z. B. die ZIP-Teile von paket_erstellen oder eine einzelne Ergebnisdatei) `
+    + `als Anhaenge eines neuen Releases in das private GitHub-Repo ${GH_REPO || '(nicht eingerichtet)'} hoch – `
+    + `ohne Commit, ohne Git-Historie. Liefert den Link fuer Markus. Releases werden nach ${KEEP_DAYS} Tagen `
+    + `geloescht. Erlaubt sind Dateien unter ${SOURCES.join(', ')}, hoechstens ${UPLOAD_MAX_FILES}, je ${kb(UPLOAD_MAX)}.`,
+  inputSchema: {
+    type: 'object',
+    required: ['dateien', 'titel'],
+    properties: {
+      dateien: { type: 'array', items: { type: 'string' }, description: 'Dateipfade (keine Ordner, keine Platzhalter), z. B. die von paket_erstellen genannten' },
+      titel: { type: 'string', description: 'Titel des Releases, z. B. "Warmwasser 19.10.2026"' },
+      beschreibung: { type: 'string', description: 'Kurzer Text zum Release (Markdown), z. B. was im Paket ist' },
+    },
+  },
 }];
 
 // ---------------------------------------------------------------- MCP (JSON-RPC ueber stdio)
@@ -360,10 +514,12 @@ async function handle(msg) {
     case 'tools/call': {
       const { name, arguments: args = {} } = msg.params || {};
       try {
-        if (name !== 'paket_erstellen') throw new Error(`Unbekanntes Werkzeug ${name}`);
-        return { content: [{ type: 'text', text: paketErstellen(args) }] };
+        const text = name === 'paket_erstellen' ? paketErstellen(args)
+                   : name === 'paket_hochladen' ? await paketHochladen(args)
+                   : (() => { throw new Error(`Unbekanntes Werkzeug ${name}`); })();
+        return { content: [{ type: 'text', text }] };
       } catch (e) {
-        return { content: [{ type: 'text', text: 'Fehler: ' + e.message }], isError: true };
+        return { content: [{ type: 'text', text: 'Fehler: ' + hide(e.message) }], isError: true };
       }
     }
     default: {

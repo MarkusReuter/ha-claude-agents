@@ -13,3 +13,9 @@ configuration:
   pty:
     name: Pseudo terminal
     description: Run the Remote Control server inside a pseudo terminal. Only if it fails without one.
+  ablage_github_repo:
+    name: Upload repo (GitHub)
+    description: Private repo as owner/name for release-asset uploads (no git history, deleted after 30 days). Empty = no uploads. Public repos are refused.
+  ablage_github_token:
+    name: Upload token (GitHub)
+    description: Fine-grained token for this repo only, "Contents read and write", with expiry. Every upload needs approval.

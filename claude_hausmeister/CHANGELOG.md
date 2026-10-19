@@ -1,15 +1,27 @@
 # Changelog
 
-## 0.5.1
+## 0.6.0
+- Neues Werkzeug `paket_hochladen` (MCP-Server `ablage`): laedt Pakete als Anhang eines Releases in
+  ein **privates** GitHub-Repo und liefert den Link fuer den Chat – die Claude-App nimmt in normalen
+  Sitzungen keine Dateien an. Kein Commit, keine Git-Historie; Releases `paket-*` werden nach
+  30 Tagen geloescht. Neue Optionen `ablage_github_repo`, `ablage_github_token` (leer = aus)
+- Sicherheitsrelevant: (1) Managed Settings: `paket_hochladen` immer mit Freigabe (`ask`), ohne
+  Repo/Token verboten. (2) Firewall: `github.com` nur frei, wenn Repo und Token gesetzt sind
+  (neu: `ALLOW_DOMAINS_EXTRA` in run.sh/firewall.sh, nur schlichte Domainnamen). (3) MCP: einziger
+  Netzzugriff des Servers ist `ghRequest`, nur zu api/uploads.github.com, ohne Weiterleitungen,
+  Token aus allen Meldungen entfernt. Das Werkzeug prueft vor jedem Upload, dass das Repo privat
+  ist, laedt nur Dateien aus `ha/` und `ausgang/` (keine Symlinks) und raeumt halbe Releases
+  wieder ab. Begruendung: Der Hausmeister bekommt damit einen zweiten Weg nach aussen (neben HA),
+  begrenzt auf ein Repo von Markus, mit Freigabe je Upload. Ein Token mit nur „Contents“ kann
+  Sichtbarkeit und Mitglieder nicht aendern
 - Pakete sind jetzt standardmaessig **ein ZIP** (vorher Markdown): mehrere Dateien immer als ein
   ZIP statt einzeln. Ist das Ergebnis nur eine Datei, geht sie direkt raus, ohne ZIP (auch das
   Werkzeug packt eine einzelne Datei dann nicht). Markdown-Paket nur auf ausdruecklichen Wunsch
 - ZIP: eine einzelne Datei, die auch gepackt nicht in einen Teil passt, wird in Stuecke
   (`.stueck001`, ...) geteilt statt abgelehnt; `LIESMICH.md` erklaert das Zusammensetzen
 - `SendUserFile` stellt Dateien nur in Projekt-Threads zu (Ablage in der Library des Projekts).
-  In einer normalen Remote-Control-Sitzung lehnt es ab. Die Rollenanweisung sagt jetzt, was dann
-  zu tun ist: nicht wiederholen, Pfad nennen, auf „Work locally“ im Projekt hinweisen, kleine
-  Pakete auf Wunsch als Text in den Chat. Keine Rechteaenderung
+  In einer normalen Remote-Control-Sitzung lehnt es ab („not on a project thread“). Deshalb
+  `paket_hochladen` als Standardweg; `SendUserFile` nur noch als Rueckfall
 
 ## 0.5.0
 - Neuer Ordner `ausgang/` fuer Ergebnisse (Berichte, Tabellen, Diagnosen), Dateien aelter als

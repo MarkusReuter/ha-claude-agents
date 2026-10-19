@@ -79,9 +79,9 @@ before(async () => {
 after(() => { proc.kill(); fs.rmSync(tmp, { recursive: true, force: true }); });
 
 describe('Werkzeugliste', () => {
-  test('genau ein Werkzeug paket_erstellen', async () => {
+  test('Werkzeuge paket_erstellen und paket_hochladen', async () => {
     const r = await rpc('tools/list', {});
-    assert.deepEqual(r.result.tools.map((t) => t.name), ['paket_erstellen']);
+    assert.deepEqual(r.result.tools.map((t) => t.name), ['paket_erstellen', 'paket_hochladen']);
   });
 });
 
@@ -230,8 +230,16 @@ describe('Grenzen', () => {
     });
   }
 
-  test('Quelltext: kein Netz, kein Kindprozess', () => {
+  test('Quelltext: Netz nur ueber ghRequest, kein Kindprozess', () => {
     const src = fs.readFileSync(SERVER, 'utf8');
-    assert.doesNotMatch(src, /fetch\(|WebSocket|node:(http|https|net|dgram|child_process)/);
+    assert.equal(src.match(/fetch\(/g).length, 1, 'genau ein fetch');
+    assert.match(src, /async function ghRequest[\s\S]{0,200}startsWith\(GH_API \+ '\/'\)/);
+    assert.doesNotMatch(src, /WebSocket|node:(http|https|net|dgram|child_process)/);
+  });
+
+  test('ohne Repo/Token: paket_hochladen nicht eingerichtet', async () => {
+    const r = await rpc('tools/call', { name: 'paket_hochladen', arguments: { dateien: ['ausgang/bericht.md'], titel: 'x' } });
+    assert.equal(r.result.isError, true);
+    assert.match(r.result.content[0].text, /nicht eingerichtet/);
   });
 });

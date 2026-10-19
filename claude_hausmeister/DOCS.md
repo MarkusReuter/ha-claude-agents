@@ -51,15 +51,28 @@ Add-on-Log beim Start.
   Mehrere Dateien packt er immer zu **einem ZIP** zusammen (`paket_erstellen`, mit `LIESMICH.md`).
   Erst ueber 10 MB teilt er es in mehrere ZIPs und schickt alle auf einmal; eine einzelne sehr
   grosse Datei wird dabei in Stuecke geteilt. Eine lesbare Markdown-Datei statt ZIP gibt es auf
-  Wunsch („als Textdatei“). Beispiel: „Mach ein Diagnosepaket zur Automation Flurlicht“ – das Ergebnis kannst du
-  in der App speichern und in einer Cloud-Sitzung (claude.ai/code) anhaengen. Persoenliche Daten
-  schwaerzt er dabei.
-- **Zustellung nur in Projekten:** `SendUserFile` legt Dateien in der Library eines Projekts ab.
-  In einer normalen Sitzung „Hausmeister“ kommt die Datei nicht an. Dafuer in claude.ai/code ein
-  Projekt anlegen, im Projekt-Chat **+ > Work locally** waehlen, die Aufgabe stellen und auf der
-  Karte den Ordner `/data/hausmeister` erlauben. Die Datei erscheint dann im Tab **Library**;
-  Cloud-Threads desselben Projekts koennen sie direkt lesen. Voraussetzung: „Require trusted
-  devices“ ist aus.
+  Wunsch („als Textdatei“). Beispiel: „Mach ein Diagnosepaket zur Automation Flurlicht“.
+  Persoenliche Daten schwaerzt er dabei.
+- **Herunterladen ueber ein privates GitHub-Repo** (`paket_hochladen`): Die Claude-App nimmt in
+  einer normalen Sitzung keine Dateien an (`SendUserFile` geht nur in Projekt-Threads). Deshalb
+  laedt der Hausmeister das Paket – nach deiner Freigabe – als Anhang eines Releases in ein
+  privates Repo und schreibt dir den Link in den Chat. Antippen, in der GitHub-App oder im
+  Browser herunterladen. Kein Commit, also keine Git-Historie; Releases mit Tag `paket-*` loescht
+  er nach 30 Tagen. Eine Cloud-Sitzung kann das Repo einbinden.
+
+  Einrichtung:
+  1. Auf GitHub ein **privates** Repo anlegen, z. B. `ha-ablage`, mit README (ein Commit ist noetig).
+  2. *Settings > Developer settings > Fine-grained tokens*: Token nur fuer dieses Repo,
+     Recht **Contents: Read and write** (sonst nichts), mit Ablaufdatum.
+  3. Add-on-Optionen `ablage_github_repo` (z. B. `markus/ha-ablage`) und `ablage_github_token`
+     setzen, Add-on neu starten. Im Log steht dann „Ablage: Hochladen nach …“.
+
+  Schutz: Das Hochladen braucht jedes Mal deine Freigabe. Nur dann ist `github.com` in der
+  Firewall frei. Ein oeffentliches Repo lehnt das Werkzeug ab. Mit „Contents“ allein kann der
+  Token das Repo weder oeffentlich machen noch jemanden einladen.
+- Alternativ ohne Repo: in claude.ai/code ein Projekt anlegen und die Aufgabe dort mit
+  **+ > Work locally** (Ordner `/data/hausmeister`) stellen – dann landet die Datei per
+  `SendUserFile` in der **Library** des Projekts.
 
 ## Firewall auswerten (learn → enforce)
 

@@ -86,6 +86,23 @@ connected“) – massgeblich ist das Verhalten.
 **Noch zu pruefen:** Projekt-Thread „Work locally“ auf dem Hausmeister, Zustellung in die Library,
 Lesen aus einem Cloud-Thread desselben Projekts.
 
+**Entscheidung (19.10.2026): privates GitHub-Repo statt Projekt** (Hausmeister 0.6.0). Projekte
+sind Markus zu unhandlich. `paket_hochladen` laedt Pakete als **Release-Anhang** in ein privates
+Repo (z. B. `ha-ablage`) und liefert einen Link fuer den Chat.
+- Warum Release-Anhang: kein Commit, also keine Git-Historie; Release loeschen loescht die Datei.
+  Das Repo braucht nur einen Commit (README) fuer die Tags. Releases `paket-*` werden nach 30 Tagen
+  geloescht (beim naechsten Upload).
+- Warum GitHub statt Google Drive: Ein Fine-grained Token mit nur „Contents: Read and write“ kann
+  Sichtbarkeit und Mitglieder nicht aendern – Teilen ist durch die Rechte ausgeschlossen. Bei
+  Drive (`drive.file`) koennte der Token eigene Dateien freigeben.
+- Warum kein Ingress-Download: kein Weg in die Claude-App, zusaetzlicher eingehender Weg.
+- Schutz: `ask` je Upload, `github.com` in der Firewall nur bei gesetztem Repo+Token
+  (`ALLOW_DOMAINS_EXTRA`), Pruefung `private: true` vor jedem Upload, nur Dateien aus `ha/` und
+  `ausgang/`. Rule of Two: zweiter Weg nach aussen fuer den Hausmeister (neben HA), aber nur in
+  Markus' Repo und mit Freigabe.
+- Offen: ob eine Cloud-Sitzung (claude.ai/code) Release-Anhaenge des eingebundenen Repos lesen
+  kann – ein Klon enthaelt sie nicht; sonst herunterladen und anhaengen.
+
 ### 2. App → Agent (Remote Control kann es, Pfad ungeprueft)
 
 Laut Doku (Remote Control, „Send images and files from your phone or browser“): Fotos sieht

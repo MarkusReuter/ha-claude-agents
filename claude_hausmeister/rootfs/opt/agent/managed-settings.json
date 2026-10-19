@@ -17,7 +17,8 @@
       "Edit(//data/hausmeister/ha/backup/**)"
     ],
     "ask": [
-      "mcp__homeassistant__ha_write"
+      "mcp__homeassistant__ha_write",
+      "mcp__ablage__paket_hochladen"
     ],
     "allow": [
       "mcp__homeassistant__ha_read",
