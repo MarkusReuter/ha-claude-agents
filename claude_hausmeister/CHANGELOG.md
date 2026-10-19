@@ -1,6 +1,10 @@
 # Changelog
 
 ## 0.5.1
+- Pakete sind jetzt standardmaessig **ein ZIP** (vorher Markdown). Die Rollenanweisung verlangt fuer
+  jedes Ergebnis ein Paket statt Einzeldateien. Markdown nur noch auf ausdruecklichen Wunsch
+- ZIP: eine einzelne Datei, die auch gepackt nicht in einen Teil passt, wird in Stuecke
+  (`.stueck001`, ...) geteilt statt abgelehnt; `LIESMICH.md` erklaert das Zusammensetzen
 - `SendUserFile` stellt Dateien nur in Projekt-Threads zu (Ablage in der Library des Projekts).
   In einer normalen Remote-Control-Sitzung lehnt es ab. Die Rollenanweisung sagt jetzt, was dann
   zu tun ist: nicht wiederholen, Pfad nennen, auf „Work locally“ im Projekt hinweisen, kleine

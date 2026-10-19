@@ -1,9 +1,8 @@
 // MCP-Server (stdio): Dateien aus dem Arbeitsordner zu einem Paket fuer Markus zusammenfassen.
 // Ohne Abhaengigkeiten, ohne Netz. Rollenneutral – Quellen und Ziel kommen aus der Umgebung.
 //
-//   paket_erstellen – fuegt Dateien zu einer Markdown-Datei (Text) oder einem ZIP (beliebige Dateien)
-//                     zusammen und teilt das Ergebnis in mehrere Teile, wenn es groesser als max_mb
-//                     wird. Die Teile landen unter ABLAGE_ZIEL/pakete/ und gehen per SendUserFile
+//   paket_erstellen – packt Dateien zu einem ZIP (Standard) oder auf Wunsch einer Markdown-Datei
+//                     und teilt das Ergebnis in mehrere Teile, wenn es groesser als max_mb wird. Die Teile landen unter ABLAGE_ZIEL/pakete/ und gehen per SendUserFile
 //                     in die App.
 //
 // Der Server laeuft als 'agent' und koennte technisch alles lesen, was der Agent-Nutzer lesen darf
@@ -243,25 +242,45 @@ function writeZip(entries) {
 
 function buildZip(files, { name, budget, einleitung, created }) {
   const now = new Date();
-  const entries = files.map((f) => ({ rel: f.rel, e: zipEntry(f.rel, f.data, now) }));
   const readme = (k, n, list) => `# Paket ${name} – Teil ${k} von ${n}\n\nErstellt ${created} vom ${ROLE}.\n`
-    + (einleitung ? `\n${einleitung.trim()}\n` : '') + '\n## Inhalt aller Teile\n\n' + list;
-  const listLine = (x, p) => `- ${x.rel} (${kb(x.e.size)}) – Teil ${p}\n`;
-  const reserve = 22 + 2 * (30 + 46 + 12) + bytes(readme(999, 999, entries.map((x) => listLine(x, 999)).join('')));
-  if (reserve > budget / 2) throw new Error('Einleitung oder Dateiliste zu lang fuer max_mb – max_mb erhoehen oder weniger Dateien');
-  const tooBig = entries.filter((x) => reserve + entrySize(x.e) > budget);
-  if (tooBig.length) {
-    throw new Error(`Einzeln groesser als max_mb (auch gepackt): ${tooBig.map((x) => `${x.rel} (${kb(x.e.data.length)})`).join(', ')}`
-      + ' – max_mb erhoehen oder fuer Textdateien format "md" verwenden (teilt auch einzelne Dateien)');
+    + (einleitung ? `\n${einleitung.trim()}\n` : '') + '\n## Inhalt aller Teile\n\n' + list
+    + (list.includes('.stueck') ? '\nDateien mit `.stueck001`, `.stueck002`, ... sind geteilt: Stuecke in Reihenfolge '
+       + 'aneinanderhaengen (z. B. `cat datei.stueck* > datei`).\n' : '');
+  const listLine = (x, p) => `- ${x.rel} (${kb(x.size)}) – Teil ${p}\n`;
+  const overhead = (rel) => 30 + 46 + 2 * bytes(rel);
+  const reserveFor = (items) => 22 + 2 * (30 + 46 + 12)
+    + bytes(readme(999, 999, items.map((x) => listLine(x, 999)).join('')));
+
+  // Dateien, die (auch gepackt) nicht in einen Teil passen, in rohe Stuecke teilen. Die Stueckgroesse
+  // haengt vom Platz fuer LIESMICH ab und der von der Zahl der Stuecke – bis es stabil ist.
+  let items = files.map((f) => ({ rel: f.rel, size: f.data.length, e: zipEntry(f.rel, f.data, now) }));
+  for (let round = 0; round < 6; round++) {
+    const reserve = reserveFor(items);
+    if (reserve > budget / 2) throw new Error('Einleitung oder Dateiliste zu lang fuer max_mb – max_mb erhoehen oder weniger Dateien');
+    const next = [];
+    for (const f of files) {
+      const whole = zipEntry(f.rel, f.data, now);
+      if (reserve + overhead(f.rel) + whole.data.length <= budget) { next.push({ rel: f.rel, size: f.data.length, e: whole }); continue; }
+      const chunk = budget - reserve - overhead(f.rel + '.stueck000');
+      for (let i = 0, k = 1; i < f.data.length; i += chunk, k++) {
+        const rel = `${f.rel}.stueck${String(k).padStart(3, '0')}`;
+        const data = f.data.subarray(i, i + chunk);
+        next.push({ rel, size: data.length, e: zipEntry(rel, data, now) });
+      }
+    }
+    const stable = next.length === items.length;
+    items = next;
+    if (stable && reserveFor(items) <= reserve) break;
   }
+  const reserve = reserveFor(items);
   const parts = [];
   let cur = { size: reserve, items: [] };
-  for (const x of entries) {
-    if (cur.size + entrySize(x.e) > budget) { parts.push(cur); cur = { size: reserve, items: [] }; }
+  for (const x of items) {
+    if (cur.items.length && cur.size + entrySize(x.e) > budget) { parts.push(cur); cur = { size: reserve, items: [] }; }
     cur.items.push(x); cur.size += entrySize(x.e); x.part = parts.length + 1;
   }
   parts.push(cur);
-  const list = entries.map((x) => listLine(x, x.part)).join('');
+  const list = items.map((x) => listLine(x, x.part)).join('');
   return parts.map((part, i) => {
     const r = zipEntry('LIESMICH.md', Buffer.from(readme(i + 1, parts.length, list)), now);
     return { ext: 'zip', data: writeZip([r, ...part.items.map((x) => x.e)]), count: part.items.length };
@@ -272,7 +291,7 @@ function buildZip(files, { name, budget, einleitung, created }) {
 function paketErstellen(args) {
   const name = String(args.name || 'paket');
   if (!/^[\w-]{1,60}$/.test(name)) throw new Error('name: nur Buchstaben, Ziffern, - und _ (hoechstens 60 Zeichen)');
-  const format = args.format || 'md';
+  const format = args.format || 'zip';
   if (!['md', 'zip'].includes(format)) throw new Error('format: "md" oder "zip"');
   const mb = args.max_mb === undefined ? DEFAULT_MB : Number(args.max_mb);
   if (!(mb >= 0.05 && mb <= MAX_MB)) throw new Error(`max_mb: zwischen 0.05 und ${MAX_MB}`);
@@ -294,17 +313,18 @@ function paketErstellen(args) {
   });
   const skipped = format === 'md' ? files.filter((f) => asText(f.data) === null).map((f) => f.rel) : [];
   return `${files.length - skipped.length} Dateien in ${written.length} ${written.length === 1 ? 'Datei' : 'Teilen'} (Grenze ${mb} MB):\n`
-    + written.map((w) => `- ${w.file} (${kb(w.size)}, ${w.count} ${w.count === 1 ? 'Abschnitt' : 'Abschnitte'})`).join('\n')
+    + written.map((w) => `- ${w.file} (${kb(w.size)}, ${w.count} ${format === 'zip' ? (w.count === 1 ? 'Datei' : 'Dateien') : (w.count === 1 ? 'Abschnitt' : 'Abschnitte')})`).join('\n')
     + (skipped.length ? `\nNicht enthalten (Binaerdateien, dafuer format "zip"): ${skipped.join(', ')}` : '')
     + `\nJetzt alle Teile in einem SendUserFile-Aufruf schicken (files: [...], display: "attach").`;
 }
 
 const TOOLS = [{
   name: 'paket_erstellen',
-  description: 'Fasst Dateien zu einem Paket fuer Markus zusammen und teilt es in mehrere Teile, wenn es groesser '
-    + 'als max_mb wird. format "md": eine Markdown-Datei mit allen Textdateien (lesbar fuer Mensch und Claude; '
-    + 'auch einzelne grosse Dateien werden in Abschnitte geteilt). format "zip": beliebige Dateien, gepackt, '
-    + `je Teil ein eigenstaendiges ZIP. Erlaubt sind Dateien unter ${SOURCES.join(', ')}. `
+  description: 'Packt Dateien zu einem Paket fuer Markus und teilt es in mehrere Teile, wenn es groesser '
+    + 'als max_mb wird. format "zip" (Standard): ein ZIP mit allen Dateien und LIESMICH.md, je Teil ein '
+    + 'eigenstaendiges ZIP; einzelne zu grosse Dateien werden in Stuecke geteilt. format "md" nur auf Wunsch: '
+    + 'eine Markdown-Datei mit allen Textdateien. '
+    + `Erlaubt sind Dateien unter ${SOURCES.join(', ')}. `
     + `Ergebnis unter ${TARGET}, danach mit SendUserFile schicken.`,
   inputSchema: {
     type: 'object',
@@ -314,7 +334,7 @@ const TOOLS = [{
                  description: 'Dateien oder Ordner (relativ zu ' + ROOT + ' oder absolut), Platzhalter * und ** erlaubt, '
                    + 'z. B. ["ausgang/bericht.md", "ha/abruf/*.json", "ha/backup"]' },
       name: { type: 'string', description: 'Kurzname fuer die Paketdatei, z. B. "diagnose-heizung"' },
-      format: { type: 'string', enum: ['md', 'zip'], description: 'Standard "md"' },
+      format: { type: 'string', enum: ['zip', 'md'], description: 'Standard "zip"; "md" nur, wenn Markus eine lesbare Textdatei will' },
       max_mb: { type: 'number', description: `Hoechstgroesse je Teil in MB, Standard ${DEFAULT_MB}, hoechstens ${MAX_MB}` },
       einleitung: { type: 'string', description: 'Markdown-Text an den Anfang (Teil 1 bzw. LIESMICH.md), z. B. Ziel und Fehlerbild' },
     },

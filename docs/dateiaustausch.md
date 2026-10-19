@@ -43,13 +43,13 @@ als 30 Tage sind.
 **Pakete (umgesetzt in Hausmeister 0.5.0):** Damit Markus nicht viele Einzeldateien
 herunterladen muss, fasst das Werkzeug `paket_erstellen` (MCP-Server `opt/agent-mcp/ablage.mjs`,
 rollenneutral, ohne Netz) mehrere Dateien zusammen:
-- `format: "md"` (Standard): eine Markdown-Datei, je Datei ein Abschnitt mit Codeblock, vorne
-  Einleitung und Inhaltsverzeichnis. Fuer Mensch und Claude direkt lesbar. Binaerdateien werden
-  uebergangen und genannt.
-- `format: "zip"`: beliebige Dateien, je Teil ein eigenstaendiges ZIP mit `LIESMICH.md`.
+- `format: "zip"` (Standard, ab 0.5.1 – „Paket“ heisst fuer Markus ZIP): alle Dateien in einem ZIP
+  mit `LIESMICH.md` (Einleitung, Inhalt aller Teile). Je Teil ein eigenstaendiges ZIP. Eine Datei,
+  die auch gepackt nicht in einen Teil passt, wird in `.stueck001`, `.stueck002`, ... geteilt.
+- `format: "md"` nur auf Wunsch: eine Markdown-Datei, je Datei ein Abschnitt mit Codeblock;
+  Binaerdateien werden uebergangen, grosse Dateien in Abschnitte geteilt.
 - Groessengrenze je Teil `max_mb` (Standard 10, hoechstens 25 – unter der Upload-Grenze von
-  claude.ai). Wird sie ueberschritten, entstehen `…-teil1von3.md` usw.; im Markdown-Format werden
-  auch einzelne grosse Dateien in Abschnitte geteilt (an Zeilenenden, sonst nach Zeichen).
+  claude.ai). Erst wenn sie ueberschritten ist, entstehen `…-teil1von3.zip` usw.
 - Ergebnis unter `ausgang/pakete/`, nie ueberschrieben (`wx`), danach alle Teile in einem
   `SendUserFile`-Aufruf.
 - Grenzen des Werkzeugs: nur regulaere Dateien unter den Quellordnern (`ABLAGE_QUELLEN`), keine
