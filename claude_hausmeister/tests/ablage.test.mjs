@@ -149,6 +149,14 @@ describe('Markdown-Paket', () => {
 });
 
 describe('ZIP-Paket', () => {
+  test('nur eine Datei: nicht gepackt, Pfad zum direkten Schicken', async () => {
+    const r = await call({ dateien: ['ausgang/bericht.md'], name: 'einzeln' });
+    assert.equal(r.error, false, r.text);
+    assert.match(r.text, /kein Paket noetig/);
+    assert.deepEqual(filesIn(r.text), [path.join(root, 'ausgang', 'bericht.md')]);
+    assert.ok(!fs.readdirSync(path.join(root, 'ausgang', 'pakete')).some((f) => f.startsWith('einzeln-')));
+  });
+
   test('Standard ist ein einzelnes ZIP mit allen Dateien', async () => {
     const r = await call({ dateien: ['ha/abruf', 'ausgang/bericht.md'], name: 'standard' });
     assert.equal(r.error, false, r.text);

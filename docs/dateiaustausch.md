@@ -43,6 +43,7 @@ als 30 Tage sind.
 **Pakete (umgesetzt in Hausmeister 0.5.0):** Damit Markus nicht viele Einzeldateien
 herunterladen muss, fasst das Werkzeug `paket_erstellen` (MCP-Server `opt/agent-mcp/ablage.mjs`,
 rollenneutral, ohne Netz) mehrere Dateien zusammen:
+- Nur eine Datei (ohne `format`): kein Paket, das Werkzeug nennt sie zum direkten Schicken.
 - `format: "zip"` (Standard, ab 0.5.1 – „Paket“ heisst fuer Markus ZIP): alle Dateien in einem ZIP
   mit `LIESMICH.md` (Einleitung, Inhalt aller Teile). Je Teil ein eigenstaendiges ZIP. Eine Datei,
   die auch gepackt nicht in einen Teil passt, wird in `.stueck001`, `.stueck002`, ... geteilt.

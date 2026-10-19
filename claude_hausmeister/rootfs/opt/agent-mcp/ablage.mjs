@@ -298,6 +298,11 @@ function paketErstellen(args) {
   if (args.einleitung !== undefined && typeof args.einleitung !== 'string') throw new Error('einleitung: Text');
 
   const files = collect(args.dateien);
+  // Nur eine Datei, die in die Grenze passt, und kein Format gewuenscht: nichts packen, direkt schicken
+  if (files.length === 1 && args.format === undefined && files[0].data.length <= mb * 1048576) {
+    return `Nur eine Datei – kein Paket noetig. Direkt mit SendUserFile schicken (display: "attach"):\n`
+      + `- ${path.join(ROOT, files[0].rel)} (${kb(files[0].data.length)})`;
+  }
   const now = new Date();
   const created = now.toLocaleString('de-DE', { timeZone: 'Europe/Berlin' });
   const opts = { name, budget: Math.floor(mb * 1048576), einleitung: args.einleitung, created };
@@ -321,7 +326,8 @@ function paketErstellen(args) {
 const TOOLS = [{
   name: 'paket_erstellen',
   description: 'Packt Dateien zu einem Paket fuer Markus und teilt es in mehrere Teile, wenn es groesser '
-    + 'als max_mb wird. format "zip" (Standard): ein ZIP mit allen Dateien und LIESMICH.md, je Teil ein '
+    + 'als max_mb wird. Bei nur einer Datei (ohne format) wird nichts gepackt – die Antwort nennt sie zum '
+    + 'direkten Schicken. format "zip" (Standard): ein ZIP mit allen Dateien und LIESMICH.md, je Teil ein '
     + 'eigenstaendiges ZIP; einzelne zu grosse Dateien werden in Stuecke geteilt. format "md" nur auf Wunsch: '
     + 'eine Markdown-Datei mit allen Textdateien. '
     + `Erlaubt sind Dateien unter ${SOURCES.join(', ')}. `

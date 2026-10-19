@@ -47,7 +47,8 @@ Add-on-Log beim Start.
   Supervisor/Add-ons, Backups, Services `hassio.*` und `backup.*`.
 - Dateien aus `/data/hausmeister/ha/` (Konfigurationen, Sicherungen) schickt der Hausmeister auf
   Wunsch mit `SendUserFile` in den Chat – nur an deine eigene App, ohne Freigabe.
-- Ergebnisse packt er immer zu **einem ZIP** zusammen (`paket_erstellen`, mit `LIESMICH.md`).
+- Ist das Ergebnis nur eine Datei (z. B. ein Bericht als Markdown), schickt er sie direkt.
+  Mehrere Dateien packt er immer zu **einem ZIP** zusammen (`paket_erstellen`, mit `LIESMICH.md`).
   Erst ueber 10 MB teilt er es in mehrere ZIPs und schickt alle auf einmal; eine einzelne sehr
   grosse Datei wird dabei in Stuecke geteilt. Eine lesbare Markdown-Datei statt ZIP gibt es auf
   Wunsch („als Textdatei“). Beispiel: „Mach ein Diagnosepaket zur Automation Flurlicht“ – das Ergebnis kannst du

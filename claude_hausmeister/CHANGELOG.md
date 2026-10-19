@@ -1,8 +1,9 @@
 # Changelog
 
 ## 0.5.1
-- Pakete sind jetzt standardmaessig **ein ZIP** (vorher Markdown). Die Rollenanweisung verlangt fuer
-  jedes Ergebnis ein Paket statt Einzeldateien. Markdown nur noch auf ausdruecklichen Wunsch
+- Pakete sind jetzt standardmaessig **ein ZIP** (vorher Markdown): mehrere Dateien immer als ein
+  ZIP statt einzeln. Ist das Ergebnis nur eine Datei, geht sie direkt raus, ohne ZIP (auch das
+  Werkzeug packt eine einzelne Datei dann nicht). Markdown-Paket nur auf ausdruecklichen Wunsch
 - ZIP: eine einzelne Datei, die auch gepackt nicht in einen Teil passt, wird in Stuecke
   (`.stueck001`, ...) geteilt statt abgelehnt; `LIESMICH.md` erklaert das Zusammensetzen
 - `SendUserFile` stellt Dateien nur in Projekt-Threads zu (Ablage in der Library des Projekts).
