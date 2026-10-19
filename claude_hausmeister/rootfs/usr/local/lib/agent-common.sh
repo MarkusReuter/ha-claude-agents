@@ -24,8 +24,9 @@ unset SUPERVISOR_TOKEN HASSIO_TOKEN
 
 # Zusaetzliche Umgebung fuer den Agenten (und damit fuer seine MCP-Server), gefuellt von role.sh
 AGENT_ENV=()
-# Zusaetzliche interne Firewall-Ziele (host:port), gefuellt von role.sh
+# Zusaetzliche interne Firewall-Ziele (host:port) und Domains (TCP 443), gefuellt von role.sh
 ALLOW_INTERNAL_EXTRA=""
+ALLOW_DOMAINS_EXTRA=""
 # Rollenspezifisch: Optionen auswerten, AGENT_ENV fuellen, role_prepare() definieren
 source /opt/agent/role.sh
 

@@ -1,5 +1,5 @@
 name: Claude Hausmeister
-version: "0.5.0"
+version: "0.6.1"
 slug: claude_hausmeister
 description: Claude-Code-Agent "Hausmeister" – Home Assistant per Remote Control aus der Claude-App
 url: https://github.com/MarkusReuter/ha-claude-agents
@@ -27,8 +27,12 @@ options:
   setup_terminal: true
   pty: false
   ha_write: false
+  ablage_github_repo: ""
+  ablage_github_token: ""
 schema:
   firewall_mode: list(off|learn|enforce)
   setup_terminal: bool
   pty: bool
   ha_write: bool
+  ablage_github_repo: match(^([A-Za-z0-9-]+/[A-Za-z0-9._-]+)?$)
+  ablage_github_token: password

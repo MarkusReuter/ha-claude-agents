@@ -20,7 +20,10 @@
         "ABLAGE_QUELLEN": "ha ausgang",
         "ABLAGE_ZIEL": "ausgang",
         "ABLAGE_ROLLE": "Hausmeister",
-        "ABLAGE_MAX_MB": "25"
+        "ABLAGE_MAX_MB": "25",
+        "ABLAGE_GITHUB_REPO": "${ABLAGE_GITHUB_REPO:-}",
+        "ABLAGE_GITHUB_TOKEN": "${ABLAGE_GITHUB_TOKEN:-}",
+        "ABLAGE_HALTEN_TAGE": "30"
       }
     }
   }

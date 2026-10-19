@@ -78,16 +78,25 @@ before(async () => {
 });
 after(() => { proc.kill(); fs.rmSync(tmp, { recursive: true, force: true }); });
 
+describe('Zustellen ohne eingerichtetes Hochladen', () => {
+  test('nennt SendUserFile, nicht paket_hochladen', async () => {
+    const r = await call({ dateien: ['ausgang/bericht.md', 'ha/abruf/states.json'], name: 'ohne' });
+    assert.equal(r.error, false, r.text);
+    assert.match(r.text, /Jetzt mit SendUserFile schicken \(display: "attach"\)/);
+    assert.doesNotMatch(r.text, /paket_hochladen/);
+  });
+});
+
 describe('Werkzeugliste', () => {
-  test('genau ein Werkzeug paket_erstellen', async () => {
+  test('Werkzeuge paket_erstellen und paket_hochladen', async () => {
     const r = await rpc('tools/list', {});
-    assert.deepEqual(r.result.tools.map((t) => t.name), ['paket_erstellen']);
+    assert.deepEqual(r.result.tools.map((t) => t.name), ['paket_erstellen', 'paket_hochladen']);
   });
 });
 
 describe('Markdown-Paket', () => {
   test('eine Datei mit allen Textdateien, Binaerdatei uebergangen, Symlinks ignoriert', async () => {
-    const r = await call({ dateien: ['ha', 'ausgang/bericht.md'], name: 'diagnose', einleitung: 'Fehlerbild: X' });
+    const r = await call({ dateien: ['ha', 'ausgang/bericht.md'], name: 'diagnose', format: 'md', einleitung: 'Fehlerbild: X' });
     assert.equal(r.error, false, r.text);
     const files = filesIn(r.text);
     assert.equal(files.length, 1);
@@ -109,7 +118,7 @@ describe('Markdown-Paket', () => {
     const lines = Array.from({ length: 4000 }, (_, i) => `Zeile ${i} ${'x'.repeat(40)}\n`).join('');
     put('ha/gross.log', lines);
     put('ha/klein1.txt', 'eins\n');
-    const r = await call({ dateien: ['ha/gross.log', 'ha/klein1.txt'], name: 'gross', max_mb: 0.05 });
+    const r = await call({ dateien: ['ha/gross.log', 'ha/klein1.txt'], name: 'gross', format: 'md', max_mb: 0.05 });
     assert.equal(r.error, false, r.text);
     const files = filesIn(r.text);
     assert.ok(files.length >= 4, `mehrere Teile: ${files.length}`);
@@ -129,26 +138,44 @@ describe('Markdown-Paket', () => {
 
   test('sehr lange Zeile ohne Umbruch wird nach Zeichen geteilt', async () => {
     put('ha/einzeilig.json', JSON.stringify({ d: 'ä'.repeat(80000) }));
-    const r = await call({ dateien: ['ha/einzeilig.json'], name: 'zeile', max_mb: 0.05 });
+    const r = await call({ dateien: ['ha/einzeilig.json'], name: 'zeile', format: 'md', max_mb: 0.05 });
     assert.equal(r.error, false, r.text);
     for (const f of filesIn(r.text)) assert.ok(fs.statSync(f).size <= 0.05 * 1048576);
   });
 
   test('Platzhalter', async () => {
-    const r = await call({ dateien: ['ha/**/*.json'], name: 'glob' });
+    const r = await call({ dateien: ['ha/**/*.json'], name: 'glob', format: 'md' });
     const md = fs.readFileSync(filesIn(r.text)[0], 'utf8');
     assert.match(md, /## ha\/abruf\/states\.json/);
     assert.doesNotMatch(md, /## ausgang\/bericht\.md/);
   });
 
   test('eigene Pakete werden nicht wieder eingepackt', async () => {
-    const r = await call({ dateien: ['ausgang'], name: 'nochmal' });
+    const r = await call({ dateien: ['ausgang'], name: 'nochmal', format: 'md' });
     const md = fs.readFileSync(filesIn(r.text)[0], 'utf8');
     assert.doesNotMatch(md, /## ausgang\/pakete\//);
   });
 });
 
 describe('ZIP-Paket', () => {
+  test('nur eine Datei: nicht gepackt, Pfad zum direkten Schicken', async () => {
+    const r = await call({ dateien: ['ausgang/bericht.md'], name: 'einzeln' });
+    assert.equal(r.error, false, r.text);
+    assert.match(r.text, /kein Paket noetig/);
+    assert.deepEqual(filesIn(r.text), [path.join(root, 'ausgang', 'bericht.md')]);
+    assert.ok(!fs.readdirSync(path.join(root, 'ausgang', 'pakete')).some((f) => f.startsWith('einzeln-')));
+  });
+
+  test('Standard ist ein einzelnes ZIP mit allen Dateien', async () => {
+    const r = await call({ dateien: ['ha/abruf', 'ausgang/bericht.md'], name: 'standard' });
+    assert.equal(r.error, false, r.text);
+    const files = filesIn(r.text);
+    assert.equal(files.length, 1);
+    assert.match(files[0], /standard-\d{8}-\d{4}\.zip$/);
+    assert.deepEqual(Object.keys(unzip(fs.readFileSync(files[0]))).sort(),
+      ['LIESMICH.md', 'ausgang/bericht.md', 'ha/abruf/states.json']);
+  });
+
   test('gueltiges ZIP mit Binaerdatei und LIESMICH', async () => {
     const r = await call({ dateien: ['ha/abruf', 'ha/bild.png'], name: 'zip', format: 'zip' });
     assert.equal(r.error, false, r.text);
@@ -171,11 +198,23 @@ describe('ZIP-Paket', () => {
     assert.equal(all.filter((n) => n.startsWith('ha/z/')).length, 4);
   });
 
-  test('einzelne Datei groesser als max_mb: Fehler mit Hinweis', async () => {
-    put('ha/riesig.bin', crypto.randomBytes(120000));
-    const r = await call({ dateien: ['ha/riesig.bin'], name: 'x', format: 'zip', max_mb: 0.05 });
-    assert.equal(r.error, true);
-    assert.match(r.text, /groesser als max_mb/);
+  test('einzelne Datei groesser als max_mb: in Stuecke geteilt, wieder zusammensetzbar', async () => {
+    const big = crypto.randomBytes(120000);
+    put('ha/riesig.bin', big);
+    const r = await call({ dateien: ['ha/riesig.bin'], name: 'x', max_mb: 0.05 });
+    assert.equal(r.error, false, r.text);
+    const files = filesIn(r.text);
+    assert.ok(files.length >= 3);
+    const pieces = {};
+    for (const f of files) {
+      assert.ok(fs.statSync(f).size <= 0.05 * 1048576, `${f} zu gross`);
+      const z = unzip(fs.readFileSync(f));
+      assert.match(z['LIESMICH.md'].toString(), /aneinanderhaengen/);
+      for (const [n, d] of Object.entries(z)) if (n !== 'LIESMICH.md') pieces[n] = d;
+    }
+    const names = Object.keys(pieces).sort();
+    assert.ok(names.every((n) => /^ha\/riesig\.bin\.stueck\d{3}$/.test(n)), names.join());
+    assert.deepEqual(Buffer.concat(names.map((n) => pieces[n])), big);
   });
 });
 
@@ -200,8 +239,16 @@ describe('Grenzen', () => {
     });
   }
 
-  test('Quelltext: kein Netz, kein Kindprozess', () => {
+  test('Quelltext: Netz nur ueber ghRequest, kein Kindprozess', () => {
     const src = fs.readFileSync(SERVER, 'utf8');
-    assert.doesNotMatch(src, /fetch\(|WebSocket|node:(http|https|net|dgram|child_process)/);
+    assert.equal(src.match(/fetch\(/g).length, 1, 'genau ein fetch');
+    assert.match(src, /async function ghRequest[\s\S]{0,200}startsWith\(GH_API \+ '\/'\)/);
+    assert.doesNotMatch(src, /WebSocket|node:(http|https|net|dgram|child_process)/);
+  });
+
+  test('ohne Repo/Token: paket_hochladen nicht eingerichtet', async () => {
+    const r = await rpc('tools/call', { name: 'paket_hochladen', arguments: { dateien: ['ausgang/bericht.md'], titel: 'x' } });
+    assert.equal(r.result.isError, true);
+    assert.match(r.result.content[0].text, /nicht eingerichtet/);
   });
 });

@@ -43,15 +43,17 @@ als 30 Tage sind.
 **Pakete (umgesetzt in Hausmeister 0.5.0):** Damit Markus nicht viele Einzeldateien
 herunterladen muss, fasst das Werkzeug `paket_erstellen` (MCP-Server `opt/agent-mcp/ablage.mjs`,
 rollenneutral, ohne Netz) mehrere Dateien zusammen:
-- `format: "md"` (Standard): eine Markdown-Datei, je Datei ein Abschnitt mit Codeblock, vorne
-  Einleitung und Inhaltsverzeichnis. Fuer Mensch und Claude direkt lesbar. Binaerdateien werden
-  uebergangen und genannt.
-- `format: "zip"`: beliebige Dateien, je Teil ein eigenstaendiges ZIP mit `LIESMICH.md`.
+- Nur eine Datei (ohne `format`): kein Paket, das Werkzeug nennt sie zum direkten Schicken.
+- `format: "zip"` (Standard, ab 0.5.1 – „Paket“ heisst fuer Markus ZIP): alle Dateien in einem ZIP
+  mit `LIESMICH.md` (Einleitung, Inhalt aller Teile). Je Teil ein eigenstaendiges ZIP. Eine Datei,
+  die auch gepackt nicht in einen Teil passt, wird in `.stueck001`, `.stueck002`, ... geteilt.
+- `format: "md"` nur auf Wunsch: eine Markdown-Datei, je Datei ein Abschnitt mit Codeblock;
+  Binaerdateien werden uebergangen, grosse Dateien in Abschnitte geteilt.
 - Groessengrenze je Teil `max_mb` (Standard 10, hoechstens 25 – unter der Upload-Grenze von
-  claude.ai). Wird sie ueberschritten, entstehen `…-teil1von3.md` usw.; im Markdown-Format werden
-  auch einzelne grosse Dateien in Abschnitte geteilt (an Zeilenenden, sonst nach Zeichen).
-- Ergebnis unter `ausgang/pakete/`, nie ueberschrieben (`wx`), danach alle Teile in einem
-  `SendUserFile`-Aufruf.
+  claude.ai). Erst wenn sie ueberschritten ist, entstehen `…-teil1von3.zip` usw.
+- Ergebnis unter `ausgang/pakete/`, nie ueberschrieben (`wx`). Die Antwort nennt den naechsten
+  Schritt: `paket_hochladen`, wenn eingerichtet (je Aufruf hoechstens 20 Dateien), sonst alle Teile
+  in einem `SendUserFile`-Aufruf.
 - Grenzen des Werkzeugs: nur regulaere Dateien unter den Quellordnern (`ABLAGE_QUELLEN`), keine
   Symlinks, Pruefung auf dem echten Pfad, keine eigenen Pakete erneut. Warum im MCP-Server und nicht
   per Write durch den Agenten: Zusammenkopieren per Write kostet Kontingent, ist bei grossen Dateien
@@ -60,6 +62,47 @@ rollenneutral, ohne Netz) mehrere Dateien zusammen:
 Sicherheit: keine neue Netzverbindung. Neu sind das Werkzeug `paket_erstellen` (siehe Grenzen oben)
 und ein schreibbarer Ordner ohne Konfigurationsdateien darin (Workspace-Wurzel bleibt root-eigen,
 `.claude/`/`CLAUDE.md` bleiben gesperrt).
+
+**Befund auf HAOS (19.10.2026, Hausmeister 0.5.0):** `paket_erstellen` funktioniert (Paket mit
+Zusammenfassung, CSV und Rohdaten, 8 KB). `SendUserFile` lehnt in der normalen
+Remote-Control-Sitzung ab: Die Sitzung laeuft nicht in einem Projekt-Thread, die Datei kann
+nirgends abgelegt werden. Laut Doku (Projects) landen Dateien von Threads in der **Library** des
+Projekts. Ein Projekt-Thread kann ueber Remote Control auf dem Hausmeister laufen („Run a thread on
+your own computer“, ab Claude Code 2.1.280, `claude remote-control` im Ordner – passt zu unserem
+Server-Modus). Folgen:
+- Dateien zum Herunterladen: Aufgabe im Projekt mit „Work locally“ stellen, Ordner
+  `/data/hausmeister` erlauben. Datei liegt danach in der Library.
+- Weitergabe an Cloud-Agenten wird einfacher: Cloud-Threads desselben Projekts lesen die Library,
+  ohne Herunter- und Hochladen.
+- Der Thread laeuft im Auto Mode. Managed Settings gelten weiter (Bash/Web verboten, `ha_write`
+  nur mit Option und `ask`). Offen bleibt wie bisher, ob der Auto-Mode-Klassifikator `ask`-Regeln
+  selbst freigibt – bei `ha_write: true` vor dem ersten Projekt-Thread pruefen.
+- Projekte sind Beta (Pro/Max) und gehen nicht mit „Require trusted devices“.
+
+Wortlaut des Werkzeugs (Claude Code 2.1.292, normale Sitzung, Handy-App):
+`not delivered: this session is not on a project thread, so it has nowhere to place a file`.
+Die Tools-Referenz nennt diese Einschraenkung nicht („Available when a Remote Control client is
+connected“) – massgeblich ist das Verhalten.
+
+**Noch zu pruefen:** Projekt-Thread „Work locally“ auf dem Hausmeister, Zustellung in die Library,
+Lesen aus einem Cloud-Thread desselben Projekts.
+
+**Entscheidung (19.10.2026): privates GitHub-Repo statt Projekt** (Hausmeister 0.6.0). Projekte
+sind Markus zu unhandlich. `paket_hochladen` laedt Pakete als **Release-Anhang** in ein privates
+Repo (z. B. `ha-ablage`) und liefert einen Link fuer den Chat.
+- Warum Release-Anhang: kein Commit, also keine Git-Historie; Release loeschen loescht die Datei.
+  Das Repo braucht nur einen Commit (README) fuer die Tags. Releases `paket-*` werden nach 30 Tagen
+  geloescht (beim naechsten Upload).
+- Warum GitHub statt Google Drive: Ein Fine-grained Token mit nur „Contents: Read and write“ kann
+  Sichtbarkeit und Mitglieder nicht aendern – Teilen ist durch die Rechte ausgeschlossen. Bei
+  Drive (`drive.file`) koennte der Token eigene Dateien freigeben.
+- Warum kein Ingress-Download: kein Weg in die Claude-App, zusaetzlicher eingehender Weg.
+- Schutz: `ask` je Upload, `github.com` in der Firewall nur bei gesetztem Repo+Token
+  (`ALLOW_DOMAINS_EXTRA`), Pruefung `private: true` vor jedem Upload, nur Dateien aus `ha/` und
+  `ausgang/`. Rule of Two: zweiter Weg nach aussen fuer den Hausmeister (neben HA), aber nur in
+  Markus' Repo und mit Freigabe.
+- Offen: ob eine Cloud-Sitzung (claude.ai/code) Release-Anhaenge des eingebundenen Repos lesen
+  kann – ein Klon enthaelt sie nicht; sonst herunterladen und anhaengen.
 
 ### 2. App → Agent (Remote Control kann es, Pfad ungeprueft)
 
