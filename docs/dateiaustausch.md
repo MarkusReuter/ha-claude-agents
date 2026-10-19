@@ -30,17 +30,15 @@ Kontrollinstanz; das ist dieselbe Lage wie heute beim Abtippen oder Kopieren.
 immer das eigene Konto. Fehlt nur: ein fester Ort fuer **Ergebnisse** (Berichte, Tabellen, CSV,
 Konfig-Auszuege), getrennt von Arbeitskopien.
 
-Vorschlag: je Rolle ein Ordner `ausgang/` im Arbeitsordner, agent-eigen 0700.
-
-| Rolle | Ort | persistent | Regeln |
-|---|---|---|---|
-| Hausmeister | `/data/hausmeister/ausgang/` | ja (im HA-Backup) | Read/Edit/Write allow (wie `ha/`) |
-| Archivar | `/archivar/ausgang/` | nein (Absicht: keine Paperless-Daten im Backup) | Read/Edit/Write allow; Deny fuer alle anderen Hauptordner bleibt |
+**Nur fuer den Hausmeister** (Entscheidung 19.10.2026): Ordner `/data/hausmeister/ausgang/`,
+agent-eigen 0700, persistent (im HA-Backup), Read/Edit/Write ohne Rueckfrage (wie `ha/`).
+Der Archivar bekommt weder `ausgang/` noch `paket_erstellen`; er zeigt wie bisher einzelne
+Dokumente per `SendUserFile` aus `/archivar/ocr/`.
 
 Dazu in der CLAUDE.md: Ergebnisse als Datei in `ausgang/` schreiben (Markdown, CSV, JSON), dann
 `SendUserFile` mit `display: "attach"`. Dateien in `ausgang/` sind Ergebnisse fuer Markus, nie
-Eingaben fuer eigene Werkzeugaufrufe. Aufraeumen: run.sh loescht beim Start Dateien, die aelter als
-30 Tage sind (Hausmeister), beim Archivar leert ihn ohnehin der Neustart.
+Eingaben fuer eigene Werkzeugaufrufe. Aufraeumen: `role.sh` loescht beim Start Dateien, die aelter
+als 30 Tage sind.
 
 **Pakete (umgesetzt in Hausmeister 0.5.0):** Damit Markus nicht viele Einzeldateien
 herunterladen muss, fasst das Werkzeug `paket_erstellen` (MCP-Server `opt/agent-mcp/ablage.mjs`,
@@ -58,12 +56,10 @@ rollenneutral, ohne Netz) mehrere Dateien zusammen:
   Symlinks, Pruefung auf dem echten Pfad, keine eigenen Pakete erneut. Warum im MCP-Server und nicht
   per Write durch den Agenten: Zusammenkopieren per Write kostet Kontingent, ist bei grossen Dateien
   fehleranfaellig und veraendert womoeglich den Inhalt. Tests: `claude_hausmeister/tests/ablage.test.mjs`.
-- Fuer Archivar/Sekretaer dieselbe Datei uebernehmen, nur mit anderen `ABLAGE_*`-Werten in der
-  `managed-mcp.json` (Archivar: Quellen `ausgang`, nicht `ocr`).
 
-Sicherheit: kein neues Werkzeug, keine neue Netzverbindung. Neu ist nur ein schreibbarer Ordner
-ohne Konfigurationsdateien darin (Workspace-Wurzel bleibt root-eigen, `.claude/`/`CLAUDE.md`
-bleiben gesperrt).
+Sicherheit: keine neue Netzverbindung. Neu sind das Werkzeug `paket_erstellen` (siehe Grenzen oben)
+und ein schreibbarer Ordner ohne Konfigurationsdateien darin (Workspace-Wurzel bleibt root-eigen,
+`.claude/`/`CLAUDE.md` bleiben gesperrt).
 
 ### 2. App → Agent (Remote Control kann es, Pfad ungeprueft)
 
@@ -76,7 +72,7 @@ greift beim Archivar `Read(//data/**)` / `Read(//tmp/**)`, beim Hausmeister die 
 `/data/claude` – der Upload kaeme an, waere aber nicht lesbar. Bilder gehen sicher (Teil der
 Nachricht).
 
-Pruefung auf HAOS (Hausmeister zuerst): kleine Textdatei anhaengen, fragen „Unter welchem Pfad
+Pruefung auf HAOS (Hausmeister): kleine Textdatei anhaengen, fragen „Unter welchem Pfad
 liegt die angehaengte Datei? Nicht lesen.“ Dann je nach Ergebnis:
 - liegt sie im Arbeitsordner → nichts zu tun, ggf. Read-Allow fuer diesen Unterordner;
 - liegt sie unter `/data/claude/<unterordner>` → gezielt `Read(//data/claude/<unterordner>/**)`
@@ -116,9 +112,9 @@ Archivar-Inhalte gehen nur auf ausdruecklichen Wunsch in die Cloud – sie verla
 
 ## Umsetzung (Vorschlag)
 
-1. Hausmeister 0.5.0: `ausgang/`, `paket_erstellen`, Diagnosepaket – **erledigt**.
-   Archivar: `ausgang/` + `ablage` (spaeter, bei Bedarf).
+1. Hausmeister 0.5.0: `ausgang/`, `paket_erstellen`, Diagnosepaket – **erledigt**. Nur Hausmeister,
+   nicht Archivar.
 2. Auf HAOS: Upload-Pfad pruefen (Weg 2), `SendUserFile` aus `ausgang/` in Handy- und Desktop-App.
 3. Je nach Ergebnis von 2: Deny fuer `/data/claude` aufteilen oder Weg 2 als „nur Bilder/Text“
    dokumentieren.
-4. Sekretaer bekommt dasselbe Muster von Anfang an.
+4. Sekretaer: beim Bau gesondert entscheiden.
