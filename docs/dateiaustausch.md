@@ -78,6 +78,11 @@ Server-Modus). Folgen:
   selbst freigibt – bei `ha_write: true` vor dem ersten Projekt-Thread pruefen.
 - Projekte sind Beta (Pro/Max) und gehen nicht mit „Require trusted devices“.
 
+Wortlaut des Werkzeugs (Claude Code 2.1.292, normale Sitzung, Handy-App):
+`not delivered: this session is not on a project thread, so it has nowhere to place a file`.
+Die Tools-Referenz nennt diese Einschraenkung nicht („Available when a Remote Control client is
+connected“) – massgeblich ist das Verhalten.
+
 **Noch zu pruefen:** Projekt-Thread „Work locally“ auf dem Hausmeister, Zustellung in die Library,
 Lesen aus einem Cloud-Thread desselben Projekts.
 
