@@ -10,6 +10,18 @@
         "HA_WRITE": "${HA_WRITE:-0}",
         "HA_FILES_DIR": "/data/hausmeister/ha"
       }
+    },
+    "ablage": {
+      "type": "stdio",
+      "command": "/usr/local/bin/node",
+      "args": ["/opt/agent-mcp/ablage.mjs"],
+      "env": {
+        "ABLAGE_ROOT": "/data/hausmeister",
+        "ABLAGE_QUELLEN": "ha ausgang",
+        "ABLAGE_ZIEL": "ausgang",
+        "ABLAGE_ROLLE": "Hausmeister",
+        "ABLAGE_MAX_MB": "25"
+      }
     }
   }
 }

@@ -156,7 +156,8 @@ verweigert wird.
 ## Danach
 
 - Sekretaer als weitere Kopie (gemeinsame Dateien per `tools/check-common.sh --sync`).
-- Dateiaustausch (Ablage `ausgang/`, Upload aus der App, Weitergabe an Cloud-Sitzungen): Konzept in `dateiaustausch.md`.
+- Dateiaustausch (Ablage `ausgang/`, Upload aus der App, Weitergabe an Cloud-Sitzungen): Konzept in
+  `dateiaustausch.md`; Pakete mit `paket_erstellen` ab Hausmeister 0.5.0.
 - Hausmeister-Dockerfile ebenfalls auf eine feste Node-Version pinnen (Archivar: 22.23.3).
 
 ## Arbeitsordner und Claude-Code-Version (Hausmeister 0.4.0, Archivar 0.2.0)

@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.5.0
+- Neuer Ordner `ausgang/` fuer Ergebnisse (Berichte, Tabellen, Diagnosen), Dateien aelter als
+  30 Tage werden beim Start geloescht
+- Neues Werkzeug `paket_erstellen` (eigener MCP-Server `ablage`, ohne Netz): fasst mehrere Dateien
+  zu einer Markdown-Datei oder einem ZIP zusammen und teilt sie in Teile, wenn eine Groesse
+  (Standard 10 MB, hoechstens 25 MB) ueberschritten wird. Der Hausmeister schickt alle Teile in
+  einem Schritt per `SendUserFile` in die App – zum Herunterladen oder Weitergeben, z. B. an eine
+  Cloud-Sitzung
+- Auftrag „Diagnosepaket“ in der Rollenanweisung, mit Schwaerzen persoenlicher Daten
+- Sicherheitsrelevant (Managed Settings/MCP): `paket_erstellen` und Schreiben in `ausgang/` ohne
+  Rueckfrage. Begruendung: kein Netz, liest nur regulaere Dateien unter `ha/` und `ausgang/`
+  (keine Symlinks, Pruefung auf dem echten Pfad), schreibt nur neue Dateien nach
+  `ausgang/pakete/`. Empfaenger ist ueber `SendUserFile` nur die eigene App
+
 ## 0.4.2
 - Firewall `enforce` unter HAOS repariert: Docker leitet DNS-Anfragen ueber seinen eingebauten
   Resolver aus dem Container-Netz heraus an den HA-DNS weiter; diese Anfragen (als root) blockierte

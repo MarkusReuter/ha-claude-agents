@@ -14,7 +14,7 @@ Home-Assistant-Add-on-Repository fuer drei private Claude-Code-Agenten
 - Gemeinsame Dateien (run.sh, agent-common.sh, agent-setup, agent-shell, firewall*.sh) nur in
   `claude_hausmeister/` aendern, dann `tools/check-common.sh --sync`; alle betroffenen Add-ons hochzaehlen.
   Rollenspezifisches gehoert nach `rootfs/opt/agent/role.env` und `role.sh`.
-- Tests Archivar-MCP: `node --test claude_archivar/tests/*.test.mjs`
+- Tests MCP-Server: `node --test claude_archivar/tests/*.test.mjs claude_hausmeister/tests/*.test.mjs`
 
 ## Zugriff auf Home Assistant (fuer Claude in VS Code)
 

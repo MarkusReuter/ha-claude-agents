@@ -42,6 +42,25 @@ Dazu in der CLAUDE.md: Ergebnisse als Datei in `ausgang/` schreiben (Markdown, C
 Eingaben fuer eigene Werkzeugaufrufe. Aufraeumen: run.sh loescht beim Start Dateien, die aelter als
 30 Tage sind (Hausmeister), beim Archivar leert ihn ohnehin der Neustart.
 
+**Pakete (umgesetzt in Hausmeister 0.5.0):** Damit Markus nicht viele Einzeldateien
+herunterladen muss, fasst das Werkzeug `paket_erstellen` (MCP-Server `opt/agent-mcp/ablage.mjs`,
+rollenneutral, ohne Netz) mehrere Dateien zusammen:
+- `format: "md"` (Standard): eine Markdown-Datei, je Datei ein Abschnitt mit Codeblock, vorne
+  Einleitung und Inhaltsverzeichnis. Fuer Mensch und Claude direkt lesbar. Binaerdateien werden
+  uebergangen und genannt.
+- `format: "zip"`: beliebige Dateien, je Teil ein eigenstaendiges ZIP mit `LIESMICH.md`.
+- Groessengrenze je Teil `max_mb` (Standard 10, hoechstens 25 – unter der Upload-Grenze von
+  claude.ai). Wird sie ueberschritten, entstehen `…-teil1von3.md` usw.; im Markdown-Format werden
+  auch einzelne grosse Dateien in Abschnitte geteilt (an Zeilenenden, sonst nach Zeichen).
+- Ergebnis unter `ausgang/pakete/`, nie ueberschrieben (`wx`), danach alle Teile in einem
+  `SendUserFile`-Aufruf.
+- Grenzen des Werkzeugs: nur regulaere Dateien unter den Quellordnern (`ABLAGE_QUELLEN`), keine
+  Symlinks, Pruefung auf dem echten Pfad, keine eigenen Pakete erneut. Warum im MCP-Server und nicht
+  per Write durch den Agenten: Zusammenkopieren per Write kostet Kontingent, ist bei grossen Dateien
+  fehleranfaellig und veraendert womoeglich den Inhalt. Tests: `claude_hausmeister/tests/ablage.test.mjs`.
+- Fuer Archivar/Sekretaer dieselbe Datei uebernehmen, nur mit anderen `ABLAGE_*`-Werten in der
+  `managed-mcp.json` (Archivar: Quellen `ausgang`, nicht `ocr`).
+
 Sicherheit: kein neues Werkzeug, keine neue Netzverbindung. Neu ist nur ein schreibbarer Ordner
 ohne Konfigurationsdateien darin (Workspace-Wurzel bleibt root-eigen, `.claude/`/`CLAUDE.md`
 bleiben gesperrt).
@@ -97,9 +116,8 @@ Archivar-Inhalte gehen nur auf ausdruecklichen Wunsch in die Cloud – sie verla
 
 ## Umsetzung (Vorschlag)
 
-1. Hausmeister 0.5.0 / Archivar 0.3.0: `ausgang/` anlegen (run.sh bzw. `role_prepare`), Regeln in
-   den Managed Settings, CLAUDE.md-Abschnitt „Ergebnisse“ und „Diagnosepaket“ (Hausmeister),
-   Aufraeumen beim Start.
+1. Hausmeister 0.5.0: `ausgang/`, `paket_erstellen`, Diagnosepaket – **erledigt**.
+   Archivar: `ausgang/` + `ablage` (spaeter, bei Bedarf).
 2. Auf HAOS: Upload-Pfad pruefen (Weg 2), `SendUserFile` aus `ausgang/` in Handy- und Desktop-App.
 3. Je nach Ergebnis von 2: Deny fuer `/data/claude` aufteilen oder Weg 2 als „nur Bilder/Text“
    dokumentieren.

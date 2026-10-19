@@ -21,7 +21,9 @@
     ],
     "allow": [
       "mcp__homeassistant__ha_read",
-      "Edit(//data/hausmeister/ha/**)"
+      "Edit(//data/hausmeister/ha/**)",
+      "mcp__ablage__paket_erstellen",
+      "Edit(//data/hausmeister/ausgang/**)"
     ],
     "disableBypassPermissionsMode": "disable"
   },
