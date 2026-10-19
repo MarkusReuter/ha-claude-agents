@@ -1,5 +1,5 @@
 name: Claude Architekt
-version: "0.1.0"
+version: "0.1.1"
 slug: claude_architekt
 description: Claude-Code-Agent "Architekt" – Code und Bauthemen in den eigenen GitHub-Repos, per Remote Control aus der Claude-App
 url: https://github.com/MarkusReuter/ha-claude-agents
@@ -41,6 +41,9 @@ options:
   github_owner: MarkusReuter
   github_token: ""
   austausch_repo: private-data
+  gemini_api_key: ""
+  gemini_modell: gemini-2.5-flash-image
+  gemini_max_pro_tag: 100
 schema:
   # Kein "off": ohne Firewall waeren HA, Paperless und das LAN fuer die Shell erreichbar
   firewall_mode: list(learn|enforce)
@@ -49,3 +52,6 @@ schema:
   github_owner: match(^[A-Za-z0-9-]{1,39}$)
   github_token: password
   austausch_repo: match(^([A-Za-z0-9._-]{1,100})?$)
+  gemini_api_key: password
+  gemini_modell: match(^[a-z0-9][a-z0-9.-]{0,80}$)
+  gemini_max_pro_tag: int(0,1000)

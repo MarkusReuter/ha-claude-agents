@@ -10,12 +10,14 @@ ARG TTYD_VERSION=1.7.7
 ARG TTYD_SHA256=8a217c968aba172e0dbf3f34447218dc015bc4d5e59bf51db2f2cd12b7be4f55
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Basis wie bei den anderen Rollen, dazu Entwicklungswerkzeuge fuer den Agenten (er hat Bash)
+# Basis wie bei den anderen Rollen, dazu Entwicklungswerkzeuge fuer den Agenten (er hat Bash).
+# python3-pil und poppler-utils: wie das Setup-Skript der frueheren Cloud-Umgebung (haus/tools/bild.py),
+# python-is-python3: die Repo-Anleitungen rufen "python" auf
 RUN apt-get update \
  && apt-get install -y --no-install-recommends \
       ca-certificates curl jq nftables dnsmasq-base ripgrep procps less tzdata \
       git python3 python3-pip python3-venv build-essential unzip zip xz-utils file \
-      shellcheck poppler-utils \
+      shellcheck poppler-utils python3-pil python-is-python3 ffmpeg \
  && rm -rf /var/lib/apt/lists/*
 
 # Natives Claude-Code-Binary (kein Node noetig), root-eigen unter /usr/local/bin

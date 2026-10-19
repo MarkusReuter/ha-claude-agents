@@ -13,6 +13,10 @@
 //                            Hausmeister (paket_hochladen des ablage-Servers): Release mit Tag
 //                            paket-*, Release loeschen, Tag paket-* loeschen (30-Tage-Aufraeumen).
 //   /uploads/...             Release-Dateien hochladen (uploads.github.com), nur AUSTAUSCH_REPO.
+//   /gemini/...              Google Gemini API (Text, Bilder, Video, Dateien) = generativelanguage.
+//                            googleapis.com/... mit x-goog-api-key. Alle Aufrufe erlaubt; der Key
+//                            liegt nur hier. Tageslimit GEMINI_MAX_PRO_TAG fuer kostenpflichtige
+//                            Aufrufe gegen Kostenexplosion durch Prompt Injection oder Schleifen.
 // Grund: GitHub Free kennt fuer private Repos keinen Branch-Schutz, ein Fine-grained-Token mit
 // Contents-Schreibrecht duerfte sonst auf main pushen, Tags setzen und Releases anlegen.
 
@@ -159,14 +163,28 @@ export function apiBodyError(kind, body) {
 }
 
 // ---------------------------------------------------------------------------------------------
+// Gemini: erlaubte Aufrufe
+
+// Alle Aufrufe der Gemini-API sind erlaubt (Text, Bild, Video/Veo, Interactions, Dateien,
+// Operationen abfragen) – Entscheidung Markus 19.10.2026. Begrenzt wird nur die Menge:
+// Jedes POST ausser countTokens zaehlt gegen das Tageslimit (Erzeugen kostet), GET nie.
+export function geminiRoute(httpMethod, path) {
+  if (!/^\/(upload\/|download\/)?v1(beta|alpha)?\//.test(path) || path.includes('..')) return null;
+  return { kostet: httpMethod === 'POST' && !path.endsWith(':countTokens') };
+}
+
+// ---------------------------------------------------------------------------------------------
 // Server
 
 export function createProxy(cfg) {
   const gitBase = new URL(cfg.gitBase || 'https://github.com');
   const apiBase = new URL(cfg.apiBase || 'https://api.github.com');
   const uploadBase = new URL(cfg.uploadBase || 'https://uploads.github.com');
+  const geminiBase = new URL(cfg.geminiBase || 'https://generativelanguage.googleapis.com');
   const basic = 'Basic ' + Buffer.from(`x-access-token:${cfg.token}`).toString('base64');
-  const scrub = (s) => (cfg.token ? String(s).split(cfg.token).join('***') : String(s));
+  const scrub = (s) => [cfg.token, cfg.geminiKey].filter(Boolean).reduce((t, k) => t.split(k).join('***'), String(s));
+  const geminiMax = Number.isInteger(cfg.geminiMaxPerDay) ? cfg.geminiMaxPerDay : 100;
+  const zaehler = { tag: '', anzahl: 0 };
   const log = cfg.log || ((...a) => console.log('[github-proxy]', ...a.map(scrub)));
 
   function fail(res, status, msg) {
@@ -175,22 +193,26 @@ export function createProxy(cfg) {
     res.end(`Architekt-Proxy: ${msg}\n`);
   }
 
-  function forward(req, res, target, headers, firstChunk) {
+  function forward(req, res, target, headers, firstChunk, dienst = 'GitHub') {
     const lib = target.protocol === 'https:' ? https : http;
     const up = lib.request(target, { method: req.method, headers }, (ur) => {
       const h = { ...ur.headers };
       delete h['set-cookie'];
-      if (ur.statusCode === 401) {
+      if (ur.statusCode === 401 && dienst === 'GitHub') {
         // Kein Login-Dialog im git-Client: Token fehlt/abgelaufen ist Sache von Markus
         delete h['www-authenticate'];
         log(`401 von GitHub fuer ${req.method} ${target.pathname} – Token ungueltig oder abgelaufen?`);
         ur.resume();
         return fail(res, 403, 'GitHub lehnt den Token ab (abgelaufen? Rechte?). Bitte Markus Bescheid geben.');
       }
+      // Resumable Upload (Dateien fuer Gemini/Veo): Folge-URL wieder ueber den Proxy fuehren
+      if (dienst === 'Gemini' && typeof h['x-goog-upload-url'] === 'string') {
+        h['x-goog-upload-url'] = h['x-goog-upload-url'].replace(/^https:\/\/[^/]+/, `http://127.0.0.1:${cfg.port || 8099}/gemini`);
+      }
       res.writeHead(ur.statusCode, h);
       ur.pipe(res);
     });
-    up.on('error', (e) => { log(`Upstream-Fehler: ${e.message}`); fail(res, 502, 'GitHub nicht erreichbar'); });
+    up.on('error', (e) => { log(`Upstream-Fehler: ${e.message}`); fail(res, 502, `${dienst} nicht erreichbar`); });
     if (firstChunk && firstChunk.length) up.write(firstChunk);
     req.pipe(up);
   }
@@ -351,14 +373,45 @@ export function createProxy(cfg) {
     });
   }
 
+  function handleGemini(req, res, url) {
+    if (!cfg.geminiKey) return fail(res, 503, 'kein Gemini-API-Key konfiguriert (Add-on-Option gemini_api_key)');
+    const path = url.pathname.slice('/gemini'.length);
+    const route = /%2e|%2f/i.test(path) ? null : geminiRoute(req.method, path);
+    if (!route) {
+      log(`Gemini verweigert: ${req.method} ${path}`);
+      return fail(res, 404, 'Gemini: Pfad wie bei der Google-API, z. B. /gemini/v1beta/models/<modell>:generateContent');
+    }
+    // Ein eigener Key des Agenten (?key=) wird entfernt – es zaehlt nur der des Proxys
+    url.searchParams.delete('key');
+    if (route.kostet) {
+      const tag = new Date().toLocaleDateString('sv-SE');
+      if (zaehler.tag !== tag) { zaehler.tag = tag; zaehler.anzahl = 0; }
+      if (zaehler.anzahl >= geminiMax) {
+        log(`Gemini-Tageslimit erreicht (${geminiMax})`);
+        return fail(res, 429, `Gemini-Tageslimit erreicht (${geminiMax} Aufrufe/Tag, Add-on-Option gemini_max_pro_tag). Markus fragen.`);
+      }
+      zaehler.anzahl += 1;
+      log(`Gemini ${path} (${zaehler.anzahl}/${geminiMax} heute)`);
+    }
+    const target = new URL(`${geminiBase.pathname.replace(/\/$/, '')}${path}${url.search}`, geminiBase);
+    forward(req, res, target, {
+      ...pickHeaders(req, ['content-type', 'accept', 'content-length', 'transfer-encoding', 'range',
+        'x-goog-upload-protocol', 'x-goog-upload-command', 'x-goog-upload-offset',
+        'x-goog-upload-header-content-length', 'x-goog-upload-header-content-type']),
+      'user-agent': 'ha-claude-architekt',
+      'x-goog-api-key': cfg.geminiKey,
+    }, null, 'Gemini');
+  }
+
   return http.createServer((req, res) => {
     let url;
     try { url = new URL(req.url, 'http://127.0.0.1'); } catch { return fail(res, 400, 'ungueltige URL'); }
+    if (url.pathname.startsWith('/gemini/')) return handleGemini(req, res, url);
     if (!cfg.token) return fail(res, 503, 'kein GitHub-Token konfiguriert (Add-on-Option github_token)');
     if (url.pathname.startsWith('/git/')) return handleGit(req, res, url);
     if (url.pathname.startsWith('/api/')) return handleApi(req, res, url);
     if (url.pathname.startsWith('/uploads/')) return handleUpload(req, res, url);
-    return fail(res, 404, 'Pfade: /git/<owner>/<repo>.git (git), /api/… (REST-Auswahl), /uploads/… (Release-Dateien)');
+    return fail(res, 404, 'Pfade: /git/<owner>/<repo>.git (git), /api/… (REST-Auswahl), /uploads/… (Release-Dateien), /gemini/… (Gemini)');
   });
 }
 
@@ -371,17 +424,17 @@ export function configFromEnv(env) {
   if (austausch && !NAME_RE.test(austausch)) throw new Error(`AUSTAUSCH_REPO ungueltig: '${austausch}'`);
   // Token aus einer Datei, die nur gitproxy lesen kann – als Argument (env -i TOKEN=…) stuende er
   // kurz in /proc/<pid>/cmdline, und das darf jeder Nutzer lesen
-  let token = '';
-  if (env.GITHUB_TOKEN_FILE) {
-    try { token = fs.readFileSync(env.GITHUB_TOKEN_FILE, 'utf8').trim(); } catch { token = ''; }
-  }
-  return { owner, prefix, austausch, token, port: Number(env.PROXY_PORT || 8099) };
+  const lies = (f) => { if (!f) return ''; try { return fs.readFileSync(f, 'utf8').trim(); } catch { return ''; } };
+  const max = Number(env.GEMINI_MAX_PRO_TAG ?? 100);
+  return { owner, prefix, austausch, token: lies(env.GITHUB_TOKEN_FILE), geminiKey: lies(env.GEMINI_KEY_FILE),
+           geminiMaxPerDay: Number.isInteger(max) && max >= 0 ? max : 100, port: Number(env.PROXY_PORT || 8099) };
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] || '').href) {
   const cfg = configFromEnv(process.env);
   createProxy(cfg).listen(cfg.port, '127.0.0.1', () => {
     console.log(`[github-proxy] lauscht auf 127.0.0.1:${cfg.port} – Owner ${cfg.owner}, Push nur ${cfg.prefix}*` +
-      (cfg.austausch ? `, Austausch-Repo ${cfg.austausch} (alle Branches, Releases)` : '') + (cfg.token ? '' : ' – KEIN TOKEN'));
+      (cfg.austausch ? `, Austausch-Repo ${cfg.austausch} (alle Branches, Pakete)` : '') + (cfg.token ? '' : ' – KEIN TOKEN') +
+      (cfg.geminiKey ? `; Gemini an (max. ${cfg.geminiMaxPerDay}/Tag)` : '; Gemini aus'));
   });
 }

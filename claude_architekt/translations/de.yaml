@@ -23,6 +23,20 @@ configuration:
       Repo fuer den Datenaustausch (z. B. private-data). Nur hier darf der Agent direkt auf main
       pushen und Releases mit Dateien anlegen. In allen anderen Repos nur Branches claude/* und
       Pull Requests. Leer = kein Austausch-Repo.
+  gemini_api_key:
+    name: Gemini-API-Key
+    description: >-
+      Key aus Google AI Studio fuer Bilder/Renderings (Innenarchitektur). Am besten mit
+      Abrechnung (bezahlte Stufe): Bei der kostenlosen Stufe darf Google Eingaben zur Verbesserung
+      nutzen. Nur der Proxy liest ihn, nie der Agent. Leer = Gemini aus.
+  gemini_modell:
+    name: Gemini-Bildmodell
+    description: Standardmodell fuer gemini-bild, z. B. gemini-2.5-flash-image.
+  gemini_max_pro_tag:
+    name: Gemini-Aufrufe pro Tag
+    description: >-
+      Obergrenze fuer Gemini-Aufrufe je Tag (Kostenschutz). 0 = gesperrt. Zaehler beginnt beim
+      Neustart des Add-ons von vorn.
   pty:
     name: Pseudo-Terminal
     description: >-

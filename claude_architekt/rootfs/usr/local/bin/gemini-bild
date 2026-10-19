@@ -1,0 +1,92 @@
+#!/usr/local/bin/node
+// Bilder mit Google Gemini erzeugen oder bearbeiten (Innenarchitektur, Visualisierungen), ueber den
+// Proxy des Architekten – der API-Key liegt nur dort. Ohne Abhaengigkeiten.
+//
+//   gemini-bild [-m modell] [-a 16:9] [-o ordner] [-n name] [-i bild]... "Beschreibung"
+//
+//   -i  Eingabebild (Foto, Grundriss, Skizze), mehrfach moeglich: Gemini bearbeitet bzw. nutzt sie
+//   -m  Modell (Standard: $GEMINI_MODELL), Liste: curl -s "$GITHUB_PROXY/gemini/v1beta/models"
+//   -a  Seitenverhaeltnis (1:1, 3:2, 4:3, 16:9, 9:16, ...), sonst Vorgabe des Modells
+//   -o  Zielordner (Standard: /data/architekt/ausgang/bilder), -n Dateiname ohne Endung
+// Ausgabe: Pfade der gespeicherten Bilder, dazu der Text, den Gemini mitliefert.
+import fs from 'node:fs';
+import path from 'node:path';
+
+const MIME = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp',
+               '.heic': 'image/heic', '.heif': 'image/heif', '.pdf': 'application/pdf' };
+const EXT = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' };
+
+function usage(msg) {
+  if (msg) console.error(`gemini-bild: ${msg}`);
+  console.error('Aufruf: gemini-bild [-m modell] [-a 16:9] [-o ordner] [-n name] [-i bild]... "Beschreibung"');
+  process.exit(2);
+}
+
+const args = process.argv.slice(2);
+const opt = { m: process.env.GEMINI_MODELL || 'gemini-2.5-flash-image', a: '', o: '/data/architekt/ausgang/bilder', n: '', i: [] };
+const prompt = [];
+for (let k = 0; k < args.length; k++) {
+  const a = args[k];
+  if (/^-[maoni]$/.test(a)) {
+    const v = args[++k];
+    if (v === undefined) usage(`${a} braucht einen Wert`);
+    if (a === '-i') opt.i.push(v); else opt[a[1]] = v;
+  } else if (a === '-h' || a === '--help') usage();
+  else prompt.push(a);
+}
+const text = prompt.join(' ').trim();
+if (!text) usage('Beschreibung fehlt');
+if (!/^[a-z0-9][a-z0-9.-]{0,80}$/.test(opt.m)) usage(`ungueltiges Modell: ${opt.m}`);
+if (opt.a && !/^\d{1,2}:\d{1,2}$/.test(opt.a)) usage(`ungueltiges Seitenverhaeltnis: ${opt.a}`);
+
+const parts = [{ text }];
+for (const f of opt.i) {
+  const mime = MIME[path.extname(f).toLowerCase()];
+  if (!mime) usage(`${f}: nur ${Object.keys(MIME).join(', ')}`);
+  const data = fs.readFileSync(f);
+  if (data.length > 15 * 1024 * 1024) usage(`${f}: groesser als 15 MB`);
+  parts.push({ inline_data: { mime_type: mime, data: data.toString('base64') } });
+}
+const body = { contents: [{ role: 'user', parts }], generationConfig: { responseModalities: ['TEXT', 'IMAGE'] } };
+if (opt.a) body.generationConfig.imageConfig = { aspectRatio: opt.a };
+
+const proxy = (process.env.GITHUB_PROXY || 'http://127.0.0.1:8099').replace(/\/$/, '');
+let res;
+try {
+  res = await fetch(`${proxy}/gemini/v1beta/models/${opt.m}:generateContent`, {
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
+    signal: AbortSignal.timeout(300000),
+  });
+} catch (e) {
+  console.error(`gemini-bild: Proxy nicht erreichbar (${e.cause?.code || e.message})`);
+  process.exit(1);
+}
+const raw = await res.text();
+let data; try { data = JSON.parse(raw); } catch { data = null; }
+if (!res.ok) {
+  console.error(`gemini-bild: Fehler ${res.status}: ${(data?.error?.message || raw).slice(0, 500)}`);
+  process.exit(1);
+}
+
+const cand = data?.candidates?.[0];
+const out = cand?.content?.parts || [];
+const basis = (opt.n || text.toLowerCase().normalize('NFKD').replace(/[^\w]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'bild')
+  + '-' + new Date().toISOString().replace(/[-:]/g, '').replace('T', '-').slice(0, 15);
+fs.mkdirSync(opt.o, { recursive: true });
+let n = 0;
+for (const p of out) {
+  const inline = p.inlineData || p.inline_data;
+  if (inline?.data) {
+    n += 1;
+    const ext = EXT[inline.mimeType || inline.mime_type] || 'png';
+    const file = path.join(opt.o, `${basis}${n > 1 ? '-' + n : ''}.${ext}`);
+    fs.writeFileSync(file, Buffer.from(inline.data, 'base64'), { flag: 'wx' });
+    console.log(file);
+  } else if (p.text) {
+    console.log(`Text von Gemini: ${p.text.trim()}`);
+  }
+}
+if (!n) {
+  console.error(`gemini-bild: kein Bild erhalten (finishReason: ${cand?.finishReason || data?.promptFeedback?.blockReason || 'unbekannt'})`);
+  process.exit(1);
+}

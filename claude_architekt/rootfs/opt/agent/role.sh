@@ -6,6 +6,12 @@ GITHUB_OWNER=$(opt github_owner MarkusReuter)
 GITHUB_TOKEN=$(opt github_token "")
 AUSTAUSCH_REPO=$(opt austausch_repo "")
 [[ -z "$AUSTAUSCH_REPO" || "$AUSTAUSCH_REPO" =~ ^[A-Za-z0-9._-]{1,100}$ ]] || AUSTAUSCH_REPO=""
+# Gemini (Bilder rendern): Key ebenfalls nur beim Proxy, Tageslimit gegen Kostenexplosion
+GEMINI_API_KEY=$(opt gemini_api_key "")
+GEMINI_MAX_PRO_TAG=$(opt gemini_max_pro_tag 100)
+[[ "$GEMINI_MAX_PRO_TAG" =~ ^[0-9]{1,4}$ ]] || GEMINI_MAX_PRO_TAG=100
+GEMINI_MODELL=$(opt gemini_modell gemini-2.5-flash-image)
+[[ "$GEMINI_MODELL" =~ ^[a-z0-9][a-z0-9.-]{0,80}$ ]] || GEMINI_MODELL=gemini-2.5-flash-image
 PROXY_TOKEN_DIR=/run/github-proxy
 GITHUB_OWNER_OK=0
 [[ "$GITHUB_OWNER" =~ ^[A-Za-z0-9-]{1,39}$ ]] && GITHUB_OWNER_OK=1
@@ -19,7 +25,8 @@ AGENT_ENV+=(GIT_TERMINAL_PROMPT=0 GITHUB_OWNER="$GITHUB_OWNER" GITHUB_PROXY="htt
             JAVA_HOME="$TOOLS_DIR/jdk" ANDROID_HOME="$TOOLS_DIR/android" ANDROID_SDK_ROOT="$TOOLS_DIR/android"
             PUB_CACHE="$TOOLS_DIR/pub-cache" GRADLE_USER_HOME="$TOOLS_DIR/gradle"
             NPM_CONFIG_PREFIX="$TOOLS_DIR" PIP_CACHE_DIR="$TOOLS_DIR/cache/pip" npm_config_cache="$TOOLS_DIR/cache/npm"
-            FLUTTER_SUPPRESS_ANALYTICS=true DART_SUPPRESS_ANALYTICS=true)
+            FLUTTER_SUPPRESS_ANALYTICS=true DART_SUPPRESS_ANALYTICS=true GEMINI_MODELL="$GEMINI_MODELL"
+            GEMINI_API_BASE="http://127.0.0.1:$PROXY_PORT/gemini")
 # Pakete (MCP-Server ablage, derselbe wie beim Hausmeister): Upload ins Austausch-Repo ueber den
 # Proxy. Der "Token" ist nur ein Platzhalter – der Server braucht einen Wert, der Proxy ignoriert ihn.
 if [[ -n "$AUSTAUSCH_REPO" && "$GITHUB_OWNER_OK" == "1" ]]; then
@@ -71,11 +78,12 @@ EOF
 
   # Token nur fuer gitproxy lesbar (tmpfs-Ordner, bei jedem Start neu)
   install -d -o gitproxy -g gitproxy -m 0700 "$PROXY_TOKEN_DIR"
-  ( umask 077; printf '%s' "$GITHUB_TOKEN" > "$PROXY_TOKEN_DIR/token" )
-  chown gitproxy:gitproxy "$PROXY_TOKEN_DIR/token"
+  ( umask 077; printf '%s' "$GITHUB_TOKEN" > "$PROXY_TOKEN_DIR/token"; printf '%s' "$GEMINI_API_KEY" > "$PROXY_TOKEN_DIR/gemini" )
+  chown gitproxy:gitproxy "$PROXY_TOKEN_DIR/token" "$PROXY_TOKEN_DIR/gemini"
 
   [[ -n "$GITHUB_TOKEN" ]] || log "WARNUNG: github_token ist leer – private Repos nicht erreichbar."
   log "GitHub: Repos von $GITHUB_OWNER ueber den Proxy, Push nur auf ${BRANCH_PREFIX}*, keine Tags"
+  log "Gemini: $([[ -n "$GEMINI_API_KEY" ]] && echo "an, Modell $GEMINI_MODELL, max. $GEMINI_MAX_PRO_TAG Aufrufe/Tag" || echo "aus (Option gemini_api_key leer)")"
   log "Austausch-Repo: ${AUSTAUSCH_REPO:-keins} $([[ -n "$AUSTAUSCH_REPO" ]] && echo "(alle Branches, Releases mit Dateien)")"
 }
 
@@ -89,6 +97,7 @@ role_start() {
       setpriv --reuid=1001 --regid=1001 --clear-groups --inh-caps=-all --bounding-set=-all --no-new-privs \
         env -i PATH=/usr/local/bin:/usr/bin:/bin LANG=C.UTF-8 TZ="${TZ:-Europe/Berlin}" \
         GITHUB_OWNER="$GITHUB_OWNER" GITHUB_TOKEN_FILE="$PROXY_TOKEN_DIR/token" AUSTAUSCH_REPO="$AUSTAUSCH_REPO" \
+        GEMINI_KEY_FILE="$PROXY_TOKEN_DIR/gemini" GEMINI_MAX_PRO_TAG="$GEMINI_MAX_PRO_TAG" \
         BRANCH_PREFIX="$BRANCH_PREFIX" PROXY_PORT="$PROXY_PORT" \
         node /opt/github-proxy/proxy.mjs &
       pid=$!

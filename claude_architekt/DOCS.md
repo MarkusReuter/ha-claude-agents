@@ -62,6 +62,7 @@ Den Token traegst du in der Add-on-Konfiguration unter `github_token` ein. Er la
 | Werkzeuge laden (Flutter, Android-SDK, JDK) nach `/data/architekt/.werkzeuge` | ja, persistent, nicht im Backup |
 | Workflows aendern oder starten, Secrets lesen | **nein** (Token-Rechte + Proxy) |
 | Gmail, Drive, Kalender (claude.ai-Connectoren) | **nein** (abgeschaltet) |
+| Gemini: Text, Bilder, Videos | ja, wenn `gemini_api_key` gesetzt, mit Tageslimit |
 
 Gemergt wird von dir: Pull Request in GitHub ansehen und mergen. Das ist die Freigabe.
 
@@ -89,6 +90,29 @@ waere das umstaendlich, deshalb gilt im Austausch-Repo:
 
 Warum das hier unbedenklich ist: `private-data` hat keine Workflows und keine Secrets, ein Tag
 oder Release startet dort also nichts.
+
+## Gemini (Innenarchitektur, Renderings)
+
+Mit einem Gemini-API-Key erzeugt der Architekt Bilder und Videos: Raumideen, Umgestaltungen von
+Fotos, 3D-Ansichten aus Grundrissen, Rundgaenge mit Veo. Er spricht die Gemini-API ueber seinen
+Proxy an (`$GEMINI_API_BASE`, gleiche Pfade wie bei Google, ohne Key); Ergebnis als Paket in
+`private-data`. Unterschied zur Cloud-Umgebung: Dort ergaenzte der Proxy den Key auch bei direkten
+Aufrufen an `generativelanguage.googleapis.com`. Hier muessen Skripte wie `haus/tools/bild.py`
+die Adresse aus `GEMINI_API_BASE` nehmen (kleine Aenderung, macht der Architekt selbst).
+
+1. Key in [Google AI Studio](https://aistudio.google.com/apikey) anlegen. **Empfehlung: Projekt
+   mit Abrechnung (bezahlte Stufe).** In der kostenlosen Stufe darf Google Eingaben und Ausgaben
+   zur Verbesserung seiner Dienste nutzen – das waeren Fotos deiner Raeume.
+2. In der Konfiguration `gemini_api_key` eintragen, ggf. `gemini_modell` (Standard
+   `gemini-2.5-flash-image`) und `gemini_max_pro_tag` (Standard 100, 0 = gesperrt). Neu starten.
+3. Im Log steht „Gemini: an, Modell …“. Test in der App: „Erzeuge ein Bild: gemuetliches
+   Lesezimmer mit Dachschraege“.
+
+Sicherheit: Der Key liegt nur beim Proxy, der Agent sieht ihn nicht. Alle Gemini-Aufrufe sind
+erlaubt. Das Tageslimit (jeder erzeugende Aufruf zaehlt, Abfragen nicht) begrenzt die Kosten, falls eine Prompt Injection oder eine Schleife viele Aufrufe ausloest (der
+Zaehler beginnt beim Neustart des Add-ons neu). Zusaetzlich in Google Cloud ein Budget mit
+Warnung setzen. Was der Agent an Gemini schickt, verlaesst das Haus – leg ihm nur Fotos und
+Plaene hin, die dafuer gedacht sind.
 
 ## Flutter (paperless-go)
 

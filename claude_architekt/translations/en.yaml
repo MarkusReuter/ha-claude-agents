@@ -20,6 +20,15 @@ configuration:
     description: >-
       Repository for exchanging files (e.g. private-data). Only here the agent may push to main and
       create releases with files. Elsewhere only claude/* branches and pull requests. Empty = none.
+  gemini_api_key:
+    name: Gemini API key
+    description: Google AI Studio key for images/renderings. Prefer a billed key (free tier may be used for training). Only the proxy reads it. Empty = off.
+  gemini_modell:
+    name: Gemini image model
+    description: Default model for gemini-bild, e.g. gemini-2.5-flash-image.
+  gemini_max_pro_tag:
+    name: Gemini calls per day
+    description: Daily cap on Gemini calls (cost protection). 0 = blocked. Resets on add-on restart.
   pty:
     name: Pseudo terminal
     description: Run the Remote Control server inside a pseudo terminal. Only if it fails without one.
