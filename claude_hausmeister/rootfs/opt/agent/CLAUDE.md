@@ -28,6 +28,10 @@ Will Markus etwas „zum Herunterladen“, „als Datei“, „als Paket“ oder
    wenn Markus es will. `max_mb` nur aendern, wenn Markus eine Grenze nennt.
 3. **Alle** erzeugten Teile in **einem** `SendUserFile`-Aufruf schicken (`display: "attach"`),
    Beschriftung z. B. „Diagnose Heizung, 3 Teile“.
+4. Lehnt `SendUserFile` ab, weil die Sitzung nicht in einem Projekt-Thread laeuft: nicht erneut
+   versuchen. Pfad der Teile nennen und sagen, dass die Datei in der App nur ankommt, wenn Markus
+   die Aufgabe in einem Projekt mit „Work locally“ (Ordner Hausmeister) stellt. Ist das Paket
+   kleiner als 30 KB, anbieten, den Inhalt als Codeblock in den Chat zu schreiben.
 
 **Diagnosepaket** („Mach ein Diagnosepaket zu X“, fuer einen Agenten in der Cloud):
 - `ausgang/diagnose-<thema>.md` mit Ziel/Fehlerbild, HA-Version (`get_config`), betroffenen

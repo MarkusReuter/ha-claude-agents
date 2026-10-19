@@ -61,6 +61,25 @@ Sicherheit: keine neue Netzverbindung. Neu sind das Werkzeug `paket_erstellen` (
 und ein schreibbarer Ordner ohne Konfigurationsdateien darin (Workspace-Wurzel bleibt root-eigen,
 `.claude/`/`CLAUDE.md` bleiben gesperrt).
 
+**Befund auf HAOS (19.10.2026, Hausmeister 0.5.0):** `paket_erstellen` funktioniert (Paket mit
+Zusammenfassung, CSV und Rohdaten, 8 KB). `SendUserFile` lehnt in der normalen
+Remote-Control-Sitzung ab: Die Sitzung laeuft nicht in einem Projekt-Thread, die Datei kann
+nirgends abgelegt werden. Laut Doku (Projects) landen Dateien von Threads in der **Library** des
+Projekts. Ein Projekt-Thread kann ueber Remote Control auf dem Hausmeister laufen („Run a thread on
+your own computer“, ab Claude Code 2.1.280, `claude remote-control` im Ordner – passt zu unserem
+Server-Modus). Folgen:
+- Dateien zum Herunterladen: Aufgabe im Projekt mit „Work locally“ stellen, Ordner
+  `/data/hausmeister` erlauben. Datei liegt danach in der Library.
+- Weitergabe an Cloud-Agenten wird einfacher: Cloud-Threads desselben Projekts lesen die Library,
+  ohne Herunter- und Hochladen.
+- Der Thread laeuft im Auto Mode. Managed Settings gelten weiter (Bash/Web verboten, `ha_write`
+  nur mit Option und `ask`). Offen bleibt wie bisher, ob der Auto-Mode-Klassifikator `ask`-Regeln
+  selbst freigibt – bei `ha_write: true` vor dem ersten Projekt-Thread pruefen.
+- Projekte sind Beta (Pro/Max) und gehen nicht mit „Require trusted devices“.
+
+**Noch zu pruefen:** Projekt-Thread „Work locally“ auf dem Hausmeister, Zustellung in die Library,
+Lesen aus einem Cloud-Thread desselben Projekts.
+
 ### 2. App → Agent (Remote Control kann es, Pfad ungeprueft)
 
 Laut Doku (Remote Control, „Send images and files from your phone or browser“): Fotos sieht

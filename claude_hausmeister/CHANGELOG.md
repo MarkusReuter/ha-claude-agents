@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.1
+- `SendUserFile` stellt Dateien nur in Projekt-Threads zu (Ablage in der Library des Projekts).
+  In einer normalen Remote-Control-Sitzung lehnt es ab. Die Rollenanweisung sagt jetzt, was dann
+  zu tun ist: nicht wiederholen, Pfad nennen, auf „Work locally“ im Projekt hinweisen, kleine
+  Pakete auf Wunsch als Text in den Chat. Keine Rechteaenderung
+
 ## 0.5.0
 - Neuer Ordner `ausgang/` fuer Ergebnisse (Berichte, Tabellen, Diagnosen), Dateien aelter als
   30 Tage werden beim Start geloescht

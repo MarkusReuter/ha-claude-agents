@@ -52,6 +52,12 @@ Add-on-Log beim Start.
   einmal. Beispiel: „Mach ein Diagnosepaket zur Automation Flurlicht“ – das Ergebnis kannst du
   in der App speichern und in einer Cloud-Sitzung (claude.ai/code) anhaengen. Persoenliche Daten
   schwaerzt er dabei.
+- **Zustellung nur in Projekten:** `SendUserFile` legt Dateien in der Library eines Projekts ab.
+  In einer normalen Sitzung „Hausmeister“ kommt die Datei nicht an. Dafuer in claude.ai/code ein
+  Projekt anlegen, im Projekt-Chat **+ > Work locally** waehlen, die Aufgabe stellen und auf der
+  Karte den Ordner `/data/hausmeister` erlauben. Die Datei erscheint dann im Tab **Library**;
+  Cloud-Threads desselben Projekts koennen sie direkt lesen. Voraussetzung: „Require trusted
+  devices“ ist aus.
 
 ## Firewall auswerten (learn → enforce)
 
