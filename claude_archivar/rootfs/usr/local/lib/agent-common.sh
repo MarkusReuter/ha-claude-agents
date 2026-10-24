@@ -7,13 +7,23 @@ CONFIG_DIR=/data/claude
 WORKSPACE="${WORKSPACE:-/data/workspace}"
 # Wird vom Agenten selbst am Ende der Einrichtung angelegt (liegt in seinem Config-Ordner)
 SETUP_MARKER="$CONFIG_DIR/.remote-control-enabled"
-# Ingress-Port: Einrichtungs-Terminal (ttyd) oder Login-Seite
+# Ingress-Port: Einrichtungs-Terminal (ttyd) oder Login-Seite. Status-Port: Zustand fuer HA Core.
 TTYD_PORT=7681
-# Zustand des Dienstes fuer die Login-Seite (schreibt nur root, lesbar fuer alle, nichts Geheimes)
+STATUS_PORT=7682
+# Zustand des Dienstes fuer Login-Seite und Status-Endpunkt (schreibt nur root, lesbar fuer alle,
+# nichts Geheimes). JSON {zustand, text, seit}; zustand: startet, ok, verbindung, neustart, login,
+# einrichtung. rc_log in run.sh schreibt dieselbe Form (ok/verbindung).
 STATUS_FILE=/run/agent-status
 
 log() { echo "[$(date '+%F %T')] [$ROLE] $*"; }
-status_set() { echo "$*" > "$STATUS_FILE.tmp" && chmod 0644 "$STATUS_FILE.tmp" && mv -f "$STATUS_FILE.tmp" "$STATUS_FILE"; }
+# status_set <zustand> <text> – 'seit' bleibt, solange sich der Zustand nicht aendert
+status_set() {
+  local seit
+  seit=$(jq -r --arg z "$1" 'select(.zustand == $z) | .seit // empty' "$STATUS_FILE" 2>/dev/null)
+  [[ -n "$seit" ]] || seit=$(date -Iseconds)
+  jq -cn --arg z "$1" --arg t "$2" --arg s "$seit" '{zustand: $z, text: $t, seit: $s}' > "$STATUS_FILE.tmp" \
+    && chmod 0644 "$STATUS_FILE.tmp" && mv -f "$STATUS_FILE.tmp" "$STATUS_FILE"
+}
 
 # Add-on-Option lesen (vom Supervisor in /data/options.json), sonst Standardwert
 opt() { jq -r --arg k "$1" '.[$k] | tostring' /data/options.json 2>/dev/null | grep -v '^null$' || echo "$2"; }

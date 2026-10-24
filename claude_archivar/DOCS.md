@@ -150,6 +150,11 @@ Im SSH-Terminal: `docker exec addon_<hash>_claude_archivar firewall-status`. Unt
 Paperless wird aus `paperless_url` freigegeben; sonstige Domains in `ALLOW_DOMAINS` in
 `rootfs/opt/agent/role.env`.
 
+## Meldung in Home Assistant
+
+Wie beim Hausmeister (DOCS dort, „Meldung in Home Assistant“): Status unter
+`http://f9239780-claude-archivar:7682/status`, nur fuer HA Core erreichbar.
+
 ## Login erneuern (auch vom Handy)
 
 Der Claude-Login laeuft gelegentlich ab (ca. alle 4 Wochen oder wenn Anthropic Sitzungen

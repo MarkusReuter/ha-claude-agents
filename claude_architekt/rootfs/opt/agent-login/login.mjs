@@ -1,13 +1,17 @@
-// Login-Seite fuer das HA-Seitenmenue (Ingress), wenn das Einrichtungs-Terminal aus ist.
-// Erneuert den Claude-Login vom Handy aus: 'claude auth login' starten, Link anzeigen, Code
-// entgegennehmen. Laeuft als agent ohne die Tokens der Rolle (run.sh leert AGENT_ENV).
-// Erreichbar nur ueber den Ingress-Proxy (Eingangsfilter in firewall.sh), also nur fuer HA-Admins.
+// Zwei kleine Server, laeuft als agent ohne die Tokens der Rolle (run.sh leert AGENT_ENV):
+// - Login-Seite (LOGIN_PORT) fuer das HA-Seitenmenue (Ingress), wenn das Einrichtungs-Terminal aus
+//   ist: erneuert den Claude-Login vom Handy ('claude auth login' starten, Link anzeigen, Code
+//   entgegennehmen). Erreichbar nur ueber den Ingress-Proxy, also nur fuer HA-Admins.
+// - Status (STATUS_PORT): nur GET /status mit dem Zustand aus run.sh, fuer einen REST-Sensor in HA.
+//   Erreichbar nur von HA Core. Keine Login-Funktionen.
+// Eingangsfilter fuer beide in firewall.sh.
 // Gemeinsame Datei aller Rollen – nur in claude_hausmeister aendern, dann tools/check-common.sh --sync.
 import http from 'node:http';
 import fs from 'node:fs';
 import { spawn, execFile } from 'node:child_process';
 
-const PORT = Number(process.env.LOGIN_PORT || 7681);
+const LOGIN_PORT = Number(process.env.LOGIN_PORT || 0);
+const STATUS_PORT = Number(process.env.STATUS_PORT || 0);
 const NAME = process.env.SESSION_NAME || 'Agent';
 const STATUS_FILE = process.env.AGENT_STATUS_FILE || '/run/agent-status';
 // Fuer Tests ersetzbar (JSON-Liste: Programm und erste Argumente); setzt nur run.sh bzw. der Test
@@ -101,8 +105,13 @@ function authStatus() {
   });
 }
 
+// Zustand aus run.sh: {zustand, text, seit}. Nur bekannte Felder als kurze Zeichenketten weitergeben.
 function dienstStatus() {
-  try { return fs.readFileSync(STATUS_FILE, 'utf8').trim().slice(0, 300); } catch { return 'unbekannt'; }
+  try {
+    const s = JSON.parse(fs.readFileSync(STATUS_FILE, 'utf8'));
+    const feld = (v) => (typeof v === 'string' ? v.slice(0, 200) : null);
+    return { zustand: feld(s.zustand) || 'unbekannt', text: feld(s.text) || '', seit: feld(s.seit) };
+  } catch { return { zustand: 'unbekannt', text: 'Zustand nicht lesbar', seit: null }; }
 }
 
 function json(res, status, obj) {
@@ -249,12 +258,20 @@ function loginText(s) {
   if (!s.angemeldet) return 'kein Login gespeichert';
   return 'gespeichert' + (s.email ? ' (' + s.email + (s.abo ? ', ' + s.abo : '') + ')' : '');
 }
+function dienstText(d) {
+  let t = d.text || d.zustand;
+  const z = d.seit ? new Date(d.seit) : null;
+  if (z && !isNaN(z)) t += ' (seit ' + z.toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) + ')';
+  return t;
+}
 async function status() {
   try {
     const s = await fetch('status', { cache: 'no-store' }).then((r) => r.json());
     $('titel').textContent = s.name + ' – Anmeldung'; document.title = $('titel').textContent;
-    $('dienst').textContent = s.dienst; $('login').textContent = loginText(s);
-  } catch { $('dienst').textContent = 'nicht erreichbar'; }
+    $('dienst').textContent = dienstText(s.dienst);
+    $('dienst').className = s.dienst.zustand === 'ok' ? 'ok' : s.dienst.zustand === 'startet' ? '' : 'fehler';
+    $('login').textContent = loginText(s);
+  } catch { $('dienst').textContent = 'nicht erreichbar'; $('dienst').className = 'fehler'; }
 }
 $('start').onclick = async () => {
   $('start').disabled = true; meldung('Starte Anmeldung …');
@@ -280,8 +297,18 @@ status(); setInterval(status, 15000);
 </html>
 `;
 
-const server = http.createServer((req, res) => {
-  handle(req, res).catch((e) => json(res, 500, { fehler: e.message }));
-});
-server.listen(PORT, '0.0.0.0', () => console.log(`Login-Seite auf Port ${PORT}`));
+if (LOGIN_PORT) {
+  http.createServer((req, res) => {
+    handle(req, res).catch((e) => json(res, 500, { fehler: e.message }));
+  }).listen(LOGIN_PORT, '0.0.0.0', () => console.log(`Login-Seite auf Port ${LOGIN_PORT}`));
+}
+
+// Status fuer HA: nur lesen, ohne Aufruf von claude
+if (STATUS_PORT) {
+  http.createServer((req, res) => {
+    const pfad = new URL(req.url, 'http://x').pathname;
+    if (req.method === 'GET' && pfad === '/status') return json(res, 200, { name: NAME, ...dienstStatus() });
+    json(res, 404, { fehler: 'Nicht gefunden' });
+  }).listen(STATUS_PORT, '0.0.0.0', () => console.log(`Status auf Port ${STATUS_PORT}`));
+}
 for (const sig of ['SIGTERM', 'SIGINT']) process.on(sig, () => { beende(login); process.exit(0); });

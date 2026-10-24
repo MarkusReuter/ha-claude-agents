@@ -1,4 +1,4 @@
-// Tests fuer die Login-Seite (opt/agent-login/login.mjs) mit einem nachgebauten 'claude', das sich
+// Tests fuer Login-Seite und Status-Endpunkt (opt/agent-login/login.mjs) mit einem nachgebauten 'claude', das sich
 // wie 'claude auth login' ohne Terminal verhaelt (Link ausgeben, Code von stdin lesen). Ohne Abhaengigkeiten.
 // Aufruf im Repo-Wurzelordner:  node --test claude_hausmeister/tests/*.test.mjs
 import { test, describe, before, after } from 'node:test';
@@ -50,7 +50,7 @@ if (cmd === 'auth' && sub === 'login') {
 }
 `;
 
-let tmp, cfg, statusFile, proc, base;
+let tmp, cfg, statusFile, proc, base, statusBase;
 
 function freierPort() {
   return new Promise((resolve) => {
@@ -68,17 +68,24 @@ describe('Login-Seite', () => {
     tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'login-'));
     cfg = path.join(tmp, 'claude'); fs.mkdirSync(cfg);
     const fake = path.join(tmp, 'fake-claude.mjs'); fs.writeFileSync(fake, FAKE);
-    statusFile = path.join(tmp, 'agent-status'); fs.writeFileSync(statusFile, 'Login abgelaufen? Mehrfach sofort beendet\n');
+    statusFile = path.join(tmp, 'agent-status');
+    fs.writeFileSync(statusFile, JSON.stringify({ zustand: 'login', text: 'Login abgelaufen? Mehrfach sofort beendet', seit: '2026-10-25T00:12:07+02:00' }) + '\n');
     const port = await freierPort();
+    const sport = await freierPort();
     base = `http://127.0.0.1:${port}`;
+    statusBase = `http://127.0.0.1:${sport}`;
     proc = spawn(process.execPath, [SERVER], {
-      env: { ...process.env, LOGIN_PORT: String(port), SESSION_NAME: 'Testagent', AGENT_STATUS_FILE: statusFile,
+      env: { ...process.env, LOGIN_PORT: String(port), STATUS_PORT: String(sport), SESSION_NAME: 'Testagent', AGENT_STATUS_FILE: statusFile,
              CLAUDE_CONFIG_DIR: cfg, CLAUDE_CMD: JSON.stringify([process.execPath, fake]),
              // Darf nicht bis zu claude durchgereicht werden
              HA_TOKEN: 'geheim-ha', PAPERLESS_TOKEN: 'geheim-paperless' },
       stdio: ['ignore', 'pipe', 'inherit'],
     });
-    await new Promise((resolve) => proc.stdout.once('data', resolve));
+    // Beide Server melden sich mit einer Zeile
+    let aus = '';
+    await new Promise((resolve) => proc.stdout.on('data', (d) => {
+      aus += d; if (/Login-Seite auf/.test(aus) && /Status auf/.test(aus)) resolve();
+    }));
   });
   after(() => { proc?.kill(); fs.rmSync(tmp, { recursive: true, force: true }); });
 
@@ -93,8 +100,32 @@ describe('Login-Seite', () => {
   test('Status: Dienstzustand aus der Statusdatei, kein Login', async () => {
     const s = await status();
     assert.equal(s.name, 'Testagent');
-    assert.equal(s.dienst, 'Login abgelaufen? Mehrfach sofort beendet');
+    assert.deepEqual(s.dienst, { zustand: 'login', text: 'Login abgelaufen? Mehrfach sofort beendet', seit: '2026-10-25T00:12:07+02:00' });
     assert.equal(s.angemeldet, false);
+  });
+
+  test('Status-Port: nur GET /status mit Zustand, keine Login-Funktionen', async () => {
+    const r = await fetch(statusBase + '/status');
+    assert.equal(r.status, 200);
+    assert.deepEqual(await r.json(), { name: 'Testagent', zustand: 'login', text: 'Login abgelaufen? Mehrfach sofort beendet', seit: '2026-10-25T00:12:07+02:00' });
+    assert.equal((await fetch(statusBase + '/')).status, 404);
+    for (const pfad of ['/start', '/code', '/abbrechen']) {
+      const p = await fetch(statusBase + pfad, { method: 'POST', headers: { 'x-agent-login': '1', 'content-type': 'application/json' }, body: '{}' });
+      assert.equal(p.status, 404, pfad);
+    }
+  });
+
+  test('Status: kaputte oder fremde Statusdatei', async () => {
+    const alt = fs.readFileSync(statusFile, 'utf8');
+    try {
+      fs.writeFileSync(statusFile, 'kein json');
+      assert.equal((await fetch(statusBase + '/status').then((r) => r.json())).zustand, 'unbekannt');
+      fs.writeFileSync(statusFile, JSON.stringify({ zustand: 'ok', text: 'x'.repeat(5000), geheim: 'nein', seit: 7 }));
+      const s = await fetch(statusBase + '/status').then((r) => r.json());
+      assert.deepEqual(Object.keys(s).sort(), ['name', 'seit', 'text', 'zustand']);
+      assert.equal(s.text.length, 200);
+      assert.equal(s.seit, null);
+    } finally { fs.writeFileSync(statusFile, alt); }
   });
 
   test('POST ohne eigenen Header wird abgelehnt (kein Formular von fremden Seiten)', async () => {

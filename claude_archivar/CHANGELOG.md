@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.2.6
+- **Zustand fuer Home Assistant:** Status-Endpunkt `http://<hostname>:7682/status` (JSON:
+  `zustand`, `text`, `seit`) fuer einen REST-Sensor; eine HA-Automation meldet Stoerungen aufs
+  Handy (Einrichtung in den DOCS des Hausmeisters). `zustand` = `ok` erst, wenn Remote Control
+  wirklich verbunden ist („Connected“ in der Ausgabe); Unterbrechungen (`verbindung`) und
+  Login-Fehler (`login`, sofort an der Fehlermeldung erkannt) werden sichtbar
+- Login-Seite zeigt den Zustand mit Zeitpunkt und Farbe
+- Sicherheitsrelevant: neuer eingehender Port 7682, Eingangsfilter nur von HA Core (172.30.32.1),
+  Loopback und IPv6 gesperrt. Liefert nur den Zustand (nichts Geheimes), keine Login-Funktionen;
+  laeuft im selben Prozess wie die Login-Seite (agent, ohne `AGENT_ENV`), auch wenn
+  `setup_terminal` an ist. Keine neue Faehigkeit fuer den Agenten, kein HA-Zugang fuer
+  Archivar/Architekt noetig (HA fragt ab)
+
 ## 0.2.5
 - **Login-Seite im HA-Seitenmenue:** Ist `setup_terminal` aus, zeigt die Web-UI (Seitenmenue
   „Archivar“, auch in der HA-App) den Zustand des Dienstes und erneuert den Claude-Login ohne

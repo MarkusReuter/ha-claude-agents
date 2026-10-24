@@ -38,6 +38,8 @@ Den Token traegst du in der Add-on-Konfiguration unter `github_token` ein. Er la
    „Klone ha-claude-agents und zeig mir die letzten 3 Commits.“
 5. `setup_terminal` wieder ausschalten und das Add-on neu starten. Im Seitenmenue liegt dann
    die Login-Seite zum Erneuern des Logins vom Handy (wie beim Hausmeister, „Login erneuern“).
+   Zustand fuer HA unter `http://f9239780-claude-architekt:7682/status` (nur HA Core, siehe
+   Hausmeister, „Meldung in Home Assistant“).
 
 ## Optionen
 

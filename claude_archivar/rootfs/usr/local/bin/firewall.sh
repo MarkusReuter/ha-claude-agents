@@ -11,7 +11,8 @@
 # gesperrt sind private/lokale Netze (LAN, hassio-Netz mit HA, Supervisor und anderen Add-ons) und
 # IPv6 (globale IPv6-Adressen im Heimnetz lassen sich nicht von Internet-Zielen unterscheiden).
 # learn sperrt dann nichts und protokolliert Ziele im lokalen Netz in 'waere_blockiert'.
-# Unabhaengig vom Modus: Einrichtungs-Terminal (ttyd) nur vom Ingress-Proxy erreichbar.
+# Unabhaengig vom Modus: Einrichtungs-Terminal bzw. Login-Seite nur vom Ingress-Proxy erreichbar,
+# der Status-Endpunkt (nur Zustand, nichts Geheimes) nur von HA Core.
 # Exit != 0 heisst: Regeln nicht (vollstaendig) gesetzt.
 set -euo pipefail
 MODE="${1:-learn}"
@@ -29,7 +30,9 @@ for d in $DOMAINS_EXTRA; do
 done
 
 TTYD_PORT=7681
+STATUS_PORT=7682
 INGRESS_IP=172.30.32.2     # Supervisor (Ingress-Proxy) im hassio-Netz
+CORE_IP=172.30.32.1        # HA Core (Host-Netz, kommt ueber das Gateway des hassio-Netzes)
 ANTHROPIC_NET=160.79.104.0/23
 ORIG_RESOLV=/etc/resolv.conf.orig
 EGRESS="${EGRESS:-allowlist}"
@@ -43,17 +46,19 @@ pkill -x dnsmasq 2>/dev/null || true
 [[ -f "$ORIG_RESOLV" ]] || cp /etc/resolv.conf "$ORIG_RESOLV"
 cat "$ORIG_RESOLV" > /etc/resolv.conf   # bind-mount: Inhalt ersetzen, nicht die Datei
 
-# Eingehend: ttyd nur vom Ingress-Proxy
+# Eingehend: ttyd/Login-Seite nur vom Ingress-Proxy, Status nur von HA Core (auch kein Loopback)
 nft -f - <<EOF
 table inet agentfw {
   chain input {
     type filter hook input priority filter; policy accept;
     tcp dport $TTYD_PORT ip saddr != $INGRESS_IP drop
     meta nfproto ipv6 tcp dport $TTYD_PORT drop
+    tcp dport $STATUS_PORT ip saddr != $CORE_IP drop
+    meta nfproto ipv6 tcp dport $STATUS_PORT drop
   }
 }
 EOF
-log "Eingang: Port $TTYD_PORT nur von $INGRESS_IP"
+log "Eingang: Port $TTYD_PORT nur von $INGRESS_IP, Port $STATUS_PORT nur von $CORE_IP"
 
 if [[ "$MODE" == "off" ]]; then
   log "AUS – kein Egress-Filter aktiv."

@@ -90,6 +90,37 @@ Ein bestehender Login wird nur ersetzt, wenn die neue Anmeldung klappt. Die Seit
 `claude auth login`, kennt keine Tokens der Rolle und ist nur ueber den Ingress-Proxy erreichbar
 (HA-Admins).
 
+## Meldung in Home Assistant
+
+Jedes Agenten-Add-on meldet seinen Zustand unter `http://<hostname>:7682/status` (nur fuer HA Core
+erreichbar, nur lesen), z. B. `{"name":"Hausmeister","zustand":"ok","text":"Verbunden","seit":"…"}`.
+`zustand`: `ok` (mit der Claude-App verbunden), `startet`, `verbindung` (unterbrochen),
+`neustart`, `login` (Login ungueltig/abgelaufen), `einrichtung` (noch nicht eingerichtet).
+
+In die `configuration.yaml` (danach HA neu starten), Hostnamen siehe Add-on-Info bzw. Log
+(„Status fuer HA: …“):
+
+```yaml
+rest:
+  - resource: http://f9239780-claude-hausmeister:7682/status
+    scan_interval: 60
+    sensor:
+      - name: Claude Hausmeister Zustand
+        unique_id: claude_hausmeister_zustand
+        value_template: "{{ value_json.zustand }}"
+        json_attributes: [text, seit]
+    binary_sensor:
+      - name: Claude Hausmeister Störung
+        unique_id: claude_hausmeister_stoerung
+        device_class: problem
+        value_template: "{{ value_json.zustand != 'ok' }}"
+  # ebenso fuer claude-archivar und claude-architekt
+```
+
+Die Stoerung ist `an`, solange der Agent nicht verbunden ist, und `nicht verfuegbar`, wenn das
+Add-on nicht antwortet (gestoppt, abgestuerzt). Eine Automation meldet beides nach 10 Minuten
+aufs Handy; ein Tipp auf die Meldung oeffnet die Login-Seite (`/hassio/ingress/<slug>`).
+
 ## Firewall auswerten (learn → enforce)
 
 Im SSH-Terminal: `docker exec addon_<hash>_claude_hausmeister firewall-status`.

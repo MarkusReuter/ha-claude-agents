@@ -76,22 +76,31 @@ trap on_term TERM INT
 if declare -F role_start >/dev/null; then role_start; fi
 
 # Ingress (HA-Seitenmenue): Einrichtungs-Terminal, wenn gewuenscht, sonst die Login-Seite zum
-# Erneuern des Logins vom Handy. Beides nur, wenn der Eingangsfilter steht (nur Ingress-Proxy).
-# Die Login-Seite bekommt AGENT_ENV nicht – sie braucht keinen Token der Rolle.
-status_set "Startet"
+# Erneuern des Logins vom Handy. Dazu immer der Status-Endpunkt fuer HA Core (Port 7682, nur
+# Zustand). Alles nur, wenn der Eingangsfilter steht (firewall.sh). Login-Seite und Status bekommen
+# AGENT_ENV nicht – sie brauchen keinen Token der Rolle.
+status_set startet "Startet"
 if ! nft list chain inet agentfw input >/dev/null 2>&1; then
-  log "Einrichtungs-Terminal/Login-Seite NICHT gestartet: Eingangsfilter fehlt."
-elif [[ "$SETUP_TERMINAL" == "true" ]]; then
-  log "Einrichtungs-Terminal aktiv: Add-on-Seite > 'Web-UI oeffnen'. Danach setup_terminal wieder ausschalten."
-  ( cd "$WORKSPACE" && as_agent ttyd --port "$TTYD_PORT" --writable --ping-interval 30 \
-      -t titleFixed="$SESSION_NAME – Einrichtung" -t fontSize=15 /usr/local/bin/agent-setup ) &
-  children+=($!)
+  log "Einrichtungs-Terminal, Login-Seite und Status NICHT gestartet: Eingangsfilter fehlt."
 else
-  ( AGENT_ENV=(LOGIN_PORT="$TTYD_PORT" AGENT_STATUS_FILE="$STATUS_FILE")
+  login_port="$TTYD_PORT"
+  if [[ "$SETUP_TERMINAL" == "true" ]]; then
+    login_port=""
+    log "Einrichtungs-Terminal aktiv: Add-on-Seite > 'Web-UI oeffnen'. Danach setup_terminal wieder ausschalten."
+    ( cd "$WORKSPACE" && as_agent ttyd --port "$TTYD_PORT" --writable --ping-interval 30 \
+        -t titleFixed="$SESSION_NAME – Einrichtung" -t fontSize=15 /usr/local/bin/agent-setup ) &
+    children+=($!)
+  else
+    log "Login-Seite aktiv: HA-Seitenmenue > '$SESSION_NAME' (auch in der HA-App)."
+  fi
+  ( AGENT_ENV=(LOGIN_PORT="$login_port" STATUS_PORT="$STATUS_PORT" AGENT_STATUS_FILE="$STATUS_FILE")
     cd "$WORKSPACE" && as_agent node /opt/agent-login/login.mjs ) &
   children+=($!)
-  log "Login-Seite aktiv: HA-Seitenmenue > '$SESSION_NAME' (auch in der HA-App)."
+  log "Status fuer HA: http://$(hostname):$STATUS_PORT/status (nur von HA Core erreichbar)"
 fi
+
+# Zustand 'login' (rc_log erkennt ihn an der Fehlermeldung) bleibt, bis die Verbindung steht
+status_weich() { jq -e '.zustand == "login"' "$STATUS_FILE" >/dev/null 2>&1 || status_set "$@"; }
 
 pause() { sleep "$1" & child=$!; wait "$child"; child=0; }
 
@@ -103,19 +112,39 @@ warte_auf_login() {
   vorher=$(login_stand)
   for (( i = 0; i < $1; i += 10 )); do
     pause 10
-    if [[ "$(login_stand)" != "$vorher" ]]; then log "Neuer Login gespeichert – starte neu."; return; fi
+    if [[ "$(login_stand)" != "$vorher" ]]; then
+      log "Neuer Login gespeichert – starte neu."
+      status_set startet "Neuer Login – verbindet …"
+      return
+    fi
   done
 }
 
 # Ausgabe von 'claude remote-control' fuers Add-on-Log. Die Statusanzeige wird alle paar Sekunden
 # neu gezeichnet (sonst zehntausende Zeilen pro Stunde): Steuerzeichen entfernen, Verbindungs- und
 # Kapazitaetszeile nur bei Aenderung, alle anderen Zeilen (Sitzungen, Hinweise, Fehler) beim ersten Mal.
+# Dabei den Zustand fuer Login-Seite und HA nachfuehren (gleiche Form wie status_set):
+# "Connected · <name> · <branch>" = ok, Abbruch danach = verbindung, Login-Fehler = login.
 rc_log() {
-  ROLE="$ROLE" perl -ne '
+  ROLE="$ROLE" STATUS_FILE="$STATUS_FILE" perl -MPOSIX=strftime -ne '
     BEGIN { $| = 1 }
+    sub zustand {
+      my ($z, $t) = @_;
+      return if $z eq ($akt // ""); $akt = $z;
+      my $s = strftime("%Y-%m-%dT%H:%M:%S%z", localtime); $s =~ s/(\d\d)$/:$1/;
+      my $f = $ENV{STATUS_FILE};
+      open(my $o, ">", "$f.tmp") or return;
+      print $o qq({"zustand":"$z","text":"$t","seit":"$s"}\n); close $o;
+      chmod 0644, "$f.tmp"; rename "$f.tmp", $f;
+    }
     s/\e\][^\a\e]*(?:\a|\e\\)//g; s/\e\[[0-9;?]*[A-Za-z]//g; s/[\r\n]//g;
     s/^[^[:alnum:]\[]+//;  # Rahmen-/Spinnerzeichen am Anfang
     next unless length;
+    if (/^Connected\b/) { zustand("ok", "Verbunden") }
+    elsif (/^(?:Reconnecting|Disconnected|Offline)\b/i || (/^Connecting\b/ && ($akt // "") eq "ok")) {
+      zustand("verbindung", "Verbindung unterbrochen – verbindet neu") }
+    elsif (/must be logged in|requires a claude\.ai subscription/) {
+      zustand("login", "Login ungueltig oder abgelaufen – bitte neu anmelden") }
     my $k = /^Capacity:/ ? "cap" : /Connected|Connecting|Reconnect|Disconnected|offline/ ? "status" : "";
     if ($k) { next if ($last{$k} // "") eq $_; $last{$k} = $_ }
     else    { next if $seen{$_}++; %seen = ($_ => 1) if keys %seen > 500 }
@@ -127,7 +156,7 @@ hinweis_gezeigt=0
 fast_fails=0
 while true; do
   if [[ ! -f "$SETUP_MARKER" ]]; then
-    status_set "Nicht eingerichtet – setup_terminal einschalten"
+    status_set einrichtung "Nicht eingerichtet – setup_terminal einschalten"
     if (( hinweis_gezeigt % 10 == 0 )); then
       log "Noch nicht eingerichtet. setup_terminal einschalten und 'Web-UI oeffnen' – oder per SSH:"
       log "  docker exec -it $(container_name) agent-shell"
@@ -137,7 +166,7 @@ while true; do
     continue
   fi
   if [[ ! -s "$CONFIG_DIR/.credentials.json" ]]; then
-    status_set "Kein Login – bitte neu anmelden"
+    status_set login "Kein Login – bitte neu anmelden"
     if (( hinweis_gezeigt % 10 == 0 )); then
       log "Kein Login gespeichert. Neu anmelden: HA-Seitenmenue > '$SESSION_NAME' (Login-Seite)."
     fi
@@ -146,7 +175,7 @@ while true; do
     continue
   fi
 
-  status_set "Laeuft seit $(date '+%d.%m. %H:%M')"
+  status_weich startet "Verbindet …"
   log "Starte Remote-Control-Server '$SESSION_NAME' (Firewall: $FIREWALL_MODE, PTY: $USE_PTY)"
   start=$(date +%s)
   cd "$WORKSPACE"
@@ -164,13 +193,13 @@ while true; do
   log "Server beendet (Exit $rc nach ${dur}s)."
   if (( dur < 120 )); then fast_fails=$((fast_fails + 1)); else fast_fails=0; fi
   if (( fast_fails >= 3 )); then
-    status_set "Login abgelaufen? Mehrfach sofort beendet ($(date '+%d.%m. %H:%M')) – bitte neu anmelden"
+    status_set login "Login abgelaufen? Mehrfach sofort beendet – bitte neu anmelden"
     log "Mehrfach sofort beendet – Login abgelaufen? Neu anmelden: HA-Seitenmenue > '$SESSION_NAME'." \
         "Pause bis zu 10 Minuten (endet beim neuen Login)."
     warte_auf_login 600
     fast_fails=0
   else
-    status_set "Neustart nach Exit $rc"
+    status_weich neustart "Server beendet (Exit $rc), Neustart in 15 Sekunden"
     pause 15
   fi
 done

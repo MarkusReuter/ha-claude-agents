@@ -29,4 +29,6 @@ Home-Assistant-Add-on-Repository fuer private Claude-Code-Agenten
 WebSocket-Helper und Token liegen in `C:\Users\marku\OneDrive\Claude\HomeAssistant`
 (`ha-ws.js`, `.mcp.json`). Add-on-Status z. B.:
 `node ha-ws.js '{"type":"supervisor/api","endpoint":"/addons/<slug>/info","method":"get"}'`.
-Add-on-Logs liefert die WS-Bridge nicht (Text statt JSON) – die liest der Nutzer in der HA-Oberflaeche.
+Add-on-Logs liefert die WS-Bridge nicht (Text statt JSON), aber der REST-Proxy von HA mit demselben
+Token: `GET http://homeassistant.fritz.box:8123/api/hassio/addons/<slug>/logs` (Accept: text/plain).
+Slugs: `f9239780_claude_hausmeister`, `…_archivar`, `…_architekt`.

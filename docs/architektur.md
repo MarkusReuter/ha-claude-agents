@@ -291,9 +291,20 @@ Rule of Two: Die Seite gehoert Markus, nicht dem Agenten – keine Aenderung an 
 | Untergeschobener Link | Nur `https://` auf claude.com oder claude.ai mit `/oauth/authorize?`, sonst Fehler |
 | CSRF ueber eine fremde Seite | POST nur mit Header `x-agent-login: 1` (erfordert CORS-Freigabe, die es nicht gibt) |
 
-Offen: Benachrichtigung aufs Handy, wenn ein Agent wegen des Logins ausfaellt. Beim Hausmeister
-ginge das ueber seinen HA-Zugang, Archivar und Architekt haetten dafuer keinen Weg (kein
-`homeassistant_api`) – erst entscheiden, ob sich die zusaetzliche Berechtigung lohnt.
+### Zustand fuer HA (Hausmeister 0.6.4 / Archivar 0.2.6 / Architekt 0.1.3)
+
+Meldung aufs Handy, wenn ein Agent ausfaellt. Verworfen: Push aus dem Add-on (Archivar/Architekt
+braeuchten `homeassistant_api`, also HA-Admin, fuer eine Statusmeldung), Log-Auswertung in HA (keine
+Entitaet, nur ueber den Supervisor), regelmaessige Pruefung durch Claude in VS Code (laeuft nicht dauernd).
+Gewaehlt: HA fragt ab (Pull). `run.sh` schreibt `/run/agent-status` (JSON, root), `rc_log` fuehrt
+ihn aus der Remote-Control-Ausgabe nach (`Connected · …` = ok). `login.mjs` liefert ihn auf Port 7682
+(nur `GET /status`), ein REST-Sensor in HA liest ihn, eine Automation meldet nach 10 Minuten.
+
+| Risiko | Gegenmassnahme |
+|---|---|
+| Neuer eingehender Port | Eingangsfilter: nur 172.30.32.1 (HA Core im Host-Netz, kommt ueber das Gateway des hassio-Netzes), kein Loopback, kein IPv6 |
+| Wer im Host-Netz laeuft (HA Core, Add-ons mit `host_network`), liest den Zustand | Inhalt ist nur Zustand, Text, Zeitpunkt – nichts Geheimes; Felder werden gekuerzt und gefiltert weitergegeben |
+| Login-Funktionen ueber den Status-Port | Eigener Server ohne Routen ausser `GET /status` |
 
 ## claude.ai-Connectoren aus (alle Rollen, Hausmeister 0.4.3 / Archivar 0.2.3 / Architekt 0.1.0)
 
