@@ -75,19 +75,37 @@ trap on_term TERM INT
 # Rollenspezifische Hintergrunddienste (Architekt: GitHub-Proxy), PIDs landen in children
 if declare -F role_start >/dev/null; then role_start; fi
 
-# Einrichtungs-Terminal (Ingress) – nur wenn gewuenscht und der Eingangsfilter steht
-if [[ "$SETUP_TERMINAL" == "true" ]]; then
-  if nft list chain inet agentfw input >/dev/null 2>&1; then
-    log "Einrichtungs-Terminal aktiv: Add-on-Seite > 'Web-UI oeffnen'. Danach setup_terminal wieder ausschalten."
-    ( cd "$WORKSPACE" && as_agent ttyd --port "$TTYD_PORT" --writable --ping-interval 30 \
-        -t titleFixed="$SESSION_NAME – Einrichtung" -t fontSize=15 /usr/local/bin/agent-setup ) &
-    children+=($!)
-  else
-    log "Einrichtungs-Terminal NICHT gestartet: Eingangsfilter fehlt."
-  fi
+# Ingress (HA-Seitenmenue): Einrichtungs-Terminal, wenn gewuenscht, sonst die Login-Seite zum
+# Erneuern des Logins vom Handy. Beides nur, wenn der Eingangsfilter steht (nur Ingress-Proxy).
+# Die Login-Seite bekommt AGENT_ENV nicht – sie braucht keinen Token der Rolle.
+status_set "Startet"
+if ! nft list chain inet agentfw input >/dev/null 2>&1; then
+  log "Einrichtungs-Terminal/Login-Seite NICHT gestartet: Eingangsfilter fehlt."
+elif [[ "$SETUP_TERMINAL" == "true" ]]; then
+  log "Einrichtungs-Terminal aktiv: Add-on-Seite > 'Web-UI oeffnen'. Danach setup_terminal wieder ausschalten."
+  ( cd "$WORKSPACE" && as_agent ttyd --port "$TTYD_PORT" --writable --ping-interval 30 \
+      -t titleFixed="$SESSION_NAME – Einrichtung" -t fontSize=15 /usr/local/bin/agent-setup ) &
+  children+=($!)
+else
+  ( AGENT_ENV=(LOGIN_PORT="$TTYD_PORT" AGENT_STATUS_FILE="$STATUS_FILE")
+    cd "$WORKSPACE" && as_agent node /opt/agent-login/login.mjs ) &
+  children+=($!)
+  log "Login-Seite aktiv: HA-Seitenmenue > '$SESSION_NAME' (auch in der HA-App)."
 fi
 
 pause() { sleep "$1" & child=$!; wait "$child"; child=0; }
+
+# Pause, die endet, sobald ein neuer Login gespeichert ist (Login-Seite oder Terminal).
+# stat folgt keinem Link, den der Agent dort hinterlassen haben koennte.
+login_stand() { stat -c '%s %y' "$CONFIG_DIR/.credentials.json" 2>/dev/null; }
+warte_auf_login() {
+  local vorher i
+  vorher=$(login_stand)
+  for (( i = 0; i < $1; i += 10 )); do
+    pause 10
+    if [[ "$(login_stand)" != "$vorher" ]]; then log "Neuer Login gespeichert – starte neu."; return; fi
+  done
+}
 
 # Ausgabe von 'claude remote-control' fuers Add-on-Log. Die Statusanzeige wird alle paar Sekunden
 # neu gezeichnet (sonst zehntausende Zeilen pro Stunde): Steuerzeichen entfernen, Verbindungs- und
@@ -108,7 +126,8 @@ rc_log() {
 hinweis_gezeigt=0
 fast_fails=0
 while true; do
-  if [[ ! -s "$CONFIG_DIR/.credentials.json" || ! -f "$SETUP_MARKER" ]]; then
+  if [[ ! -f "$SETUP_MARKER" ]]; then
+    status_set "Nicht eingerichtet – setup_terminal einschalten"
     if (( hinweis_gezeigt % 10 == 0 )); then
       log "Noch nicht eingerichtet. setup_terminal einschalten und 'Web-UI oeffnen' – oder per SSH:"
       log "  docker exec -it $(container_name) agent-shell"
@@ -117,7 +136,17 @@ while true; do
     pause 30
     continue
   fi
+  if [[ ! -s "$CONFIG_DIR/.credentials.json" ]]; then
+    status_set "Kein Login – bitte neu anmelden"
+    if (( hinweis_gezeigt % 10 == 0 )); then
+      log "Kein Login gespeichert. Neu anmelden: HA-Seitenmenue > '$SESSION_NAME' (Login-Seite)."
+    fi
+    hinweis_gezeigt=$((hinweis_gezeigt + 1))
+    warte_auf_login 30
+    continue
+  fi
 
+  status_set "Laeuft seit $(date '+%d.%m. %H:%M')"
   log "Starte Remote-Control-Server '$SESSION_NAME' (Firewall: $FIREWALL_MODE, PTY: $USE_PTY)"
   start=$(date +%s)
   cd "$WORKSPACE"
@@ -135,9 +164,13 @@ while true; do
   log "Server beendet (Exit $rc nach ${dur}s)."
   if (( dur < 120 )); then fast_fails=$((fast_fails + 1)); else fast_fails=0; fi
   if (( fast_fails >= 3 )); then
-    log "Mehrfach sofort beendet – Login abgelaufen? Einrichtung erneut (Schritt 1). Pause 10 Minuten."
-    pause 600
+    status_set "Login abgelaufen? Mehrfach sofort beendet ($(date '+%d.%m. %H:%M')) – bitte neu anmelden"
+    log "Mehrfach sofort beendet – Login abgelaufen? Neu anmelden: HA-Seitenmenue > '$SESSION_NAME'." \
+        "Pause bis zu 10 Minuten (endet beim neuen Login)."
+    warte_auf_login 600
+    fast_fails=0
   else
+    status_set "Neustart nach Exit $rc"
     pause 15
   fi
 done

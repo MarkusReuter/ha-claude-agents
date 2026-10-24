@@ -36,7 +36,8 @@ Den Token traegst du in der Add-on-Konfiguration unter `github_token` ein. Er la
    und `/login` mit dem **privaten Pro-Konto**, Schritt 2: Remote Control freischalten).
 4. In der Claude-App unter **Code** die Sitzung „Architekt“ oeffnen. Test:
    „Klone ha-claude-agents und zeig mir die letzten 3 Commits.“
-5. `setup_terminal` wieder ausschalten und das Add-on neu starten.
+5. `setup_terminal` wieder ausschalten und das Add-on neu starten. Im Seitenmenue liegt dann
+   die Login-Seite zum Erneuern des Logins vom Handy (wie beim Hausmeister, „Login erneuern“).
 
 ## Optionen
 
@@ -152,4 +153,4 @@ den der Agent weder lesen noch debuggen kann.
 - **„GitHub lehnt den Token ab“**: Token abgelaufen oder Rechte fehlen – neuen Token eintragen,
   Add-on neu starten.
 - **„refusing to allow a Personal Access Token to create or update workflow“**: gewollt, siehe oben.
-- Sonst wie beim Hausmeister (Login abgelaufen, `pty`).
+- Sonst wie beim Hausmeister (Login abgelaufen → Login-Seite im Seitenmenue, `pty`).

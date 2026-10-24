@@ -15,6 +15,7 @@ COMMON=(
   rootfs/usr/local/bin/agent-shell
   rootfs/usr/local/bin/firewall.sh
   rootfs/usr/local/bin/firewall-status
+  rootfs/opt/agent-login/login.mjs
 )
 # Nur in Rollen, die sie haben (Hausmeister, Architekt): ebenfalls identisch halten
 OPTIONAL=(

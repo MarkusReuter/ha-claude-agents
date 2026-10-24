@@ -1,5 +1,5 @@
 name: Claude Architekt
-version: "0.1.1"
+version: "0.1.2"
 slug: claude_architekt
 description: Claude-Code-Agent "Architekt" – Code und Bauthemen in den eigenen GitHub-Repos, per Remote Control aus der Claude-App
 url: https://github.com/MarkusReuter/ha-claude-agents
@@ -13,7 +13,8 @@ homeassistant_api: false
 hassio_api: false
 auth_api: false
 host_network: false
-# Einrichtungs-Terminal (ttyd). Laeuft nur bei setup_terminal: true, eingehend nur vom Ingress-Proxy.
+# Ingress: Einrichtungs-Terminal (ttyd) bei setup_terminal: true, sonst die Login-Seite.
+# Eingehend nur vom Ingress-Proxy (firewall.sh).
 ingress: true
 ingress_port: 7681
 panel_icon: mdi:pencil-ruler

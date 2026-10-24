@@ -6,7 +6,9 @@ configuration:
       enforce = only Anthropic and Paperless reachable
   setup_terminal:
     name: Setup terminal
-    description: Web terminal (Web UI) for login and tests. Turn off after setup.
+    description: >-
+      Web terminal (Web UI) for initial setup and tests. Turn off after setup – the Web UI then
+      shows the login page for renewing the login (also from a phone).
   paperless_url:
     name: Paperless URL
     description: Internal address of Paperless-ngx (without /api). Also the only internal firewall target.

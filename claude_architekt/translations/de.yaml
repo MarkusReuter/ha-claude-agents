@@ -7,7 +7,8 @@ configuration:
   setup_terminal:
     name: Einrichtungs-Terminal
     description: >-
-      Web-Terminal (Web-UI) fuer Login und Tests. Nach der Einrichtung ausschalten.
+      Web-Terminal (Web-UI) fuer die Ersteinrichtung und Tests. Nach der Einrichtung ausschalten –
+      dann zeigt die Web-UI die Login-Seite zum Erneuern des Logins (auch vom Handy).
   github_owner:
     name: GitHub-Konto
     description: >-

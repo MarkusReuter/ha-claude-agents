@@ -7,9 +7,13 @@ CONFIG_DIR=/data/claude
 WORKSPACE="${WORKSPACE:-/data/workspace}"
 # Wird vom Agenten selbst am Ende der Einrichtung angelegt (liegt in seinem Config-Ordner)
 SETUP_MARKER="$CONFIG_DIR/.remote-control-enabled"
+# Ingress-Port: Einrichtungs-Terminal (ttyd) oder Login-Seite
 TTYD_PORT=7681
+# Zustand des Dienstes fuer die Login-Seite (schreibt nur root, lesbar fuer alle, nichts Geheimes)
+STATUS_FILE=/run/agent-status
 
 log() { echo "[$(date '+%F %T')] [$ROLE] $*"; }
+status_set() { echo "$*" > "$STATUS_FILE.tmp" && chmod 0644 "$STATUS_FILE.tmp" && mv -f "$STATUS_FILE.tmp" "$STATUS_FILE"; }
 
 # Add-on-Option lesen (vom Supervisor in /data/options.json), sonst Standardwert
 opt() { jq -r --arg k "$1" '.[$k] | tostring' /data/options.json 2>/dev/null | grep -v '^null$' || echo "$2"; }

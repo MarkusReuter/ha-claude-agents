@@ -70,7 +70,8 @@ Folgen:
 5. Innerhalb einer Minute startet das Add-on den Dauerbetrieb („Starte Remote-Control-Server 'Archivar'“).
 6. In der Claude-App unter **Code** die Sitzung „Archivar“ oeffnen, einmal `/config` →
    **Push when actions required** einschalten.
-7. `setup_terminal` wieder ausschalten und das Add-on neu starten.
+7. `setup_terminal` wieder ausschalten und das Add-on neu starten. Im Seitenmenue liegt dann
+   die Login-Seite (siehe „Login erneuern“).
 
 Ohne Ingress geht es auch per SSH-Add-on (Schutzmodus kurz aus):
 `docker exec -it addon_<hash>_claude_archivar agent-shell`.
@@ -108,7 +109,7 @@ Ein Julia-Dokument muss beim Lesen `404` liefern.
 | `paperless_write` | Inhalt ersetzen und OCR-Tags setzen (Standard **aus** = nur lesen). Wirkt nach Neustart |
 | `tag_ocr_neu`, `tag_ocr_claude` | Namen der beiden OCR-Tags (Standard `ocr-neu`, `ocr-claude`) |
 | `firewall_mode` | `off` · `learn` (nichts blockieren, Ziele protokollieren) · `enforce` (nur Anthropic und Paperless; DNS nur fuer diese Namen) |
-| `setup_terminal` | Web-Terminal fuer Login und Tests; eingehend nur vom HA-Ingress-Proxy |
+| `setup_terminal` | An: Web-Terminal fuer die Ersteinrichtung und Tests. Aus: Login-Seite zum Erneuern des Logins (auch vom Handy). Beides eingehend nur vom HA-Ingress-Proxy |
 | `pty` | Server in einem Pseudo-Terminal starten – nur falls er ohne Terminal nicht laeuft |
 
 ## Werkzeuge und Freigaben
@@ -149,6 +150,21 @@ Im SSH-Terminal: `docker exec addon_<hash>_claude_archivar firewall-status`. Unt
 Paperless wird aus `paperless_url` freigegeben; sonstige Domains in `ALLOW_DOMAINS` in
 `rootfs/opt/agent/role.env`.
 
+## Login erneuern (auch vom Handy)
+
+Der Claude-Login laeuft gelegentlich ab (ca. alle 4 Wochen oder wenn Anthropic Sitzungen
+beendet). Dann ist die Sitzung in der Claude-App weg, und im Log steht „Mehrfach sofort beendet“.
+
+1. In Home Assistant (auch in der HA-App) im Seitenmenue **Archivar** oeffnen. Ist
+   `setup_terminal` aus, erscheint dort die Login-Seite mit dem Zustand des Dienstes.
+2. **Neu anmelden** → **Bei Claude anmelden**: Im Browser mit dem **privaten Pro-Konto** bestaetigen.
+3. Den angezeigten Code kopieren, zurueck in die HA-App, einfuegen, **Absenden**.
+4. Das Add-on bemerkt den neuen Login innerhalb von 10 Sekunden und startet den Server neu.
+
+Ein bestehender Login wird nur ersetzt, wenn die neue Anmeldung klappt. Die Seite startet nur
+`claude auth login`, kennt keine Tokens der Rolle und ist nur ueber den Ingress-Proxy erreichbar
+(HA-Admins).
+
 ## Wenn es klemmt
 
 - **„HTTP 401“:** Token falsch oder leer (Option `paperless_token`).
@@ -156,5 +172,5 @@ Paperless wird aus `paperless_url` freigegeben; sonstige Domains in `ALLOW_DOMAI
 - **„Paperless nicht erreichbar“:** `paperless_url` pruefen; nach einer Aenderung Add-on neu starten
   (die Firewall uebernimmt das Ziel nur beim Start). Bekommt das Paperless-Add-on eine neue
   interne IP, ebenfalls neu starten.
-- **„Mehrfach sofort beendet“ im Log:** Login abgelaufen (ca. alle 4 Wochen).
-  `setup_terminal` an, Schritt 1 erneut, danach wieder aus.
+- **„Mehrfach sofort beendet“ im Log:** Login abgelaufen. Ueber die Login-Seite neu anmelden
+  (siehe oben). Ohne Ingress: `setup_terminal` an, Schritt 1 erneut, danach wieder aus.

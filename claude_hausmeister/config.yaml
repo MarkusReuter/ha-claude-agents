@@ -1,5 +1,5 @@
 name: Claude Hausmeister
-version: "0.6.2"
+version: "0.6.3"
 slug: claude_hausmeister
 description: Claude-Code-Agent "Hausmeister" – Home Assistant per Remote Control aus der Claude-App
 url: https://github.com/MarkusReuter/ha-claude-agents
@@ -13,7 +13,8 @@ homeassistant_api: true
 hassio_api: false
 auth_api: false
 host_network: false
-# Einrichtungs-Terminal (ttyd). Laeuft nur bei setup_terminal: true, eingehend nur vom Ingress-Proxy.
+# Ingress: Einrichtungs-Terminal (ttyd) bei setup_terminal: true, sonst die Login-Seite.
+# Eingehend nur vom Ingress-Proxy (firewall.sh).
 ingress: true
 ingress_port: 7681
 panel_icon: mdi:robot-outline

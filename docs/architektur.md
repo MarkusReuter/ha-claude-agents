@@ -268,6 +268,33 @@ CI: `firewall-test.yml` Job `internet` (Internet erreichbar, Docker-Netz/LAN/Lin
 Proxy-Start als gitproxy, Push/PR/Release gegen das echte GitHub, Flutter-Download und
 `flutter test` von paperless-go, Remote Control mit Bash in der App.
 
+## Login-Seite (Hausmeister 0.6.3 / Archivar 0.2.5 / Architekt 0.1.2)
+
+Problem: Der OAuth-Login laeuft gelegentlich ab. `claude setup-token` scheidet aus (kann kein
+Remote Control), und ohne Login gibt es keine Sitzung in der App, in der man `/login` tippen
+koennte. Das ttyd-Terminal ist vom Handy kaum bedienbar und muss erst per Option eingeschaltet werden.
+
+Loesung: Ist `setup_terminal` aus, laeuft auf dem Ingress-Port statt ttyd `opt/agent-login/login.mjs`
+(Node, ohne Abhaengigkeiten). Die Seite startet `claude auth login --claudeai`. Ohne Terminal gibt
+das den Link aus und liest den Code von stdin (lokal mit 2.1.292 geprueft; ein falscher Code laesst
+den alten Login unangetastet). Die Seite zeigt den Link an, nimmt den Code an und gibt ihn weiter.
+`run.sh` erkennt den neuen Login an der geaenderten `.credentials.json` und beendet die Pause.
+
+Rule of Two: Die Seite gehoert Markus, nicht dem Agenten – keine Aenderung an A/B/C einer Rolle.
+
+| Risiko | Gegenmassnahme |
+|---|---|
+| Fremde rufen die Seite auf und melden den Agenten bei einem anderen Konto an | Eingangsfilter wie bei ttyd: nur Ingress-Proxy, also nur HA-Admins (`panel_admin`); ttyd konnte dasselbe |
+| Agent spricht die Seite an | Port 7681 per Loopback gesperrt (Quelladresse ≠ Ingress-Proxy); der Architekt koennte `claude auth login` ohnehin selbst starten |
+| Tokens der Rolle (HA, Paperless, GitHub) in einem eingehenden Dienst | Start ohne `AGENT_ENV`; `claude` bekommt nur eine Positivliste der Umgebung |
+| Eingeschleuste Eingaben an `claude` | Code nur `[A-Za-z0-9._~#-]`, 10–2048 Zeichen, eine Zeile |
+| Untergeschobener Link | Nur `https://` auf claude.com oder claude.ai mit `/oauth/authorize?`, sonst Fehler |
+| CSRF ueber eine fremde Seite | POST nur mit Header `x-agent-login: 1` (erfordert CORS-Freigabe, die es nicht gibt) |
+
+Offen: Benachrichtigung aufs Handy, wenn ein Agent wegen des Logins ausfaellt. Beim Hausmeister
+ginge das ueber seinen HA-Zugang, Archivar und Architekt haetten dafuer keinen Weg (kein
+`homeassistant_api`) – erst entscheiden, ob sich die zusaetzliche Berechtigung lohnt.
+
 ## claude.ai-Connectoren aus (alle Rollen, Hausmeister 0.4.3 / Archivar 0.2.3 / Architekt 0.1.0)
 
 Mit dem Pro-Login kann Claude Code die Connectoren des Kontos laden (Gmail, Google Drive,

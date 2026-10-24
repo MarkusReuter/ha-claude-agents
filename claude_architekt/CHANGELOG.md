@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.1.2
+- **Login-Seite im HA-Seitenmenue:** Ist `setup_terminal` aus, zeigt die Web-UI (Seitenmenue
+  „Architekt“, auch in der HA-App) den Zustand des Dienstes und erneuert den Claude-Login ohne
+  Terminal: „Neu anmelden“, Link im Browser bestaetigen, Code einfuegen. Kleiner Node-Server
+  `/opt/agent-login/login.mjs` (gemeinsame Datei), der nur `claude auth login` startet
+- Nach drei sofortigen Abbruechen (Login abgelaufen) endet die Pause von bis zu 10 Minuten, sobald
+  ein neuer Login gespeichert ist; Start nach hoechstens 10 Sekunden. Fehlt der Login ganz (bei
+  erledigter Einrichtung), wartet das Add-on ebenso auf die Login-Seite
+- Sicherheitsrelevant: neuer eingehender Dienst auf dem bisherigen ttyd-Port 7681 – gleicher
+  Eingangsfilter (nur Ingress-Proxy 172.30.32.2, Loopback und IPv6 gesperrt), also nur fuer
+  HA-Admins. Laeuft als `agent` ohne `AGENT_ENV` (keine Tokens der Rolle), `claude` bekommt nur
+  eine Positivliste der Umgebung. Der Code wird vor der Weitergabe geprueft (keine Leer- oder
+  Steuerzeichen), angezeigt werden nur Links auf claude.com/claude.ai; POST nur mit eigenem
+  Header (kein Formular von fremden Seiten). Der Agent bekommt keine neue Faehigkeit: Er erreicht
+  die Seite nicht, und `claude auth login` konnte nur der Architekt (Bash) schon vorher starten
+- `run.sh` schreibt den Zustand nach `/run/agent-status` (root, lesbar fuer alle, nichts Geheimes)
+
 ## 0.1.1
 - **Gemini fuer Innenarchitektur, Bilder und Videos:** Neuer Weg `/gemini/…` im Proxy
   (`$GEMINI_API_BASE`) zur Google Gemini API, gleiche Pfade wie bei Google, ohne Key. Alle Aufrufe

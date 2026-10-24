@@ -18,7 +18,8 @@ Automationen, Helfer, Services). Shell, Web-Abruf und Websuche sind gesperrt.
    „Starte Remote-Control-Server 'Hausmeister'“.
 5. In der Claude-App unter **Code** die Sitzung „Hausmeister“ oeffnen und einmal
    `/config` → **Push when actions required** einschalten.
-6. `setup_terminal` wieder ausschalten und das Add-on neu starten.
+6. `setup_terminal` wieder ausschalten und das Add-on neu starten. Im Seitenmenue liegt dann
+   die Login-Seite (siehe „Login erneuern“).
 
 Ohne Ingress geht es auch per SSH-Add-on (Schutzmodus kurz aus):
 `docker exec -it addon_<hash>_claude_hausmeister agent-shell`. Den genauen Namen zeigt das
@@ -29,7 +30,7 @@ Add-on-Log beim Start.
 | Option | Wirkung |
 |---|---|
 | `firewall_mode` | `off` kein Filter · `learn` nichts blockieren, Ziele protokollieren · `enforce` nur `anthropic.com`, `claude.ai`, `claude.com` (+ Subdomains, 160.79.104.0/23) und der Supervisor-Proxy; DNS nur fuer diese Namen |
-| `setup_terminal` | Web-Terminal fuer Login und Tests; eingehend nur vom HA-Ingress-Proxy erreichbar |
+| `setup_terminal` | An: Web-Terminal fuer die Ersteinrichtung und Tests. Aus: Login-Seite zum Erneuern des Logins (auch vom Handy). Beides eingehend nur vom HA-Ingress-Proxy erreichbar |
 | `ha_write` | Schreibrecht in Home Assistant (Standard **aus** = nur lesen). Wirkt nach Neustart des Add-ons |
 | `pty` | Server in einem Pseudo-Terminal starten – nur falls er ohne Terminal nicht laeuft |
 
@@ -74,6 +75,21 @@ Add-on-Log beim Start.
   **+ > Work locally** (Ordner `/data/hausmeister`) stellen – dann landet die Datei per
   `SendUserFile` in der **Library** des Projekts.
 
+## Login erneuern (auch vom Handy)
+
+Der Claude-Login laeuft gelegentlich ab (ca. alle 4 Wochen oder wenn Anthropic Sitzungen
+beendet). Dann ist die Sitzung in der Claude-App weg, und im Log steht „Mehrfach sofort beendet“.
+
+1. In Home Assistant (auch in der HA-App) im Seitenmenue **Hausmeister** oeffnen. Ist
+   `setup_terminal` aus, erscheint dort die Login-Seite mit dem Zustand des Dienstes.
+2. **Neu anmelden** → **Bei Claude anmelden**: Im Browser mit dem **privaten Pro-Konto** bestaetigen.
+3. Den angezeigten Code kopieren, zurueck in die HA-App, einfuegen, **Absenden**.
+4. Das Add-on bemerkt den neuen Login innerhalb von 10 Sekunden und startet den Server neu.
+
+Ein bestehender Login wird nur ersetzt, wenn die neue Anmeldung klappt. Die Seite startet nur
+`claude auth login`, kennt keine Tokens der Rolle und ist nur ueber den Ingress-Proxy erreichbar
+(HA-Admins).
+
 ## Firewall auswerten (learn → enforce)
 
 Im SSH-Terminal: `docker exec addon_<hash>_claude_hausmeister firewall-status`.
@@ -83,8 +99,8 @@ Fehlt eine Domain, gehoert sie in `ALLOW_DOMAINS` in `rootfs/opt/agent/role.env`
 
 ## Wenn es klemmt
 
-- **„Mehrfach sofort beendet“ im Log:** Login abgelaufen (ca. alle 4 Wochen).
-  `setup_terminal` an, Schritt 1 erneut, danach wieder aus.
+- **„Mehrfach sofort beendet“ im Log:** Login abgelaufen. Ueber die Login-Seite neu anmelden
+  (siehe oben). Ohne Ingress: `setup_terminal` an, Schritt 1 erneut, danach wieder aus.
 - **Server startet ohne Fehlermeldung nicht dauerhaft:** Option `pty` einschalten.
 - **Firewall (enforce) konnte nicht eingerichtet werden:** Der Agent startet dann bewusst
   nicht. Zum Eingrenzen voruebergehend `learn`.
