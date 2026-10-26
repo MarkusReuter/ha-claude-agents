@@ -1,5 +1,5 @@
 name: Claude Architekt
-version: "0.1.3"
+version: "0.1.4"
 slug: claude_architekt
 description: Claude-Code-Agent "Architekt" – Code und Bauthemen in den eigenen GitHub-Repos, per Remote Control aus der Claude-App
 url: https://github.com/MarkusReuter/ha-claude-agents

@@ -120,37 +120,10 @@ warte_auf_login() {
   done
 }
 
-# Ausgabe von 'claude remote-control' fuers Add-on-Log. Die Statusanzeige wird alle paar Sekunden
-# neu gezeichnet (sonst zehntausende Zeilen pro Stunde): Steuerzeichen entfernen, Verbindungs- und
-# Kapazitaetszeile nur bei Aenderung, alle anderen Zeilen (Sitzungen, Hinweise, Fehler) beim ersten Mal.
-# Dabei den Zustand fuer Login-Seite und HA nachfuehren (gleiche Form wie status_set):
-# "Connected · <name> · <branch>" = ok, Abbruch danach = verbindung, Login-Fehler = login.
-rc_log() {
-  ROLE="$ROLE" STATUS_FILE="$STATUS_FILE" perl -MPOSIX=strftime -ne '
-    BEGIN { $| = 1 }
-    sub zustand {
-      my ($z, $t) = @_;
-      return if $z eq ($akt // ""); $akt = $z;
-      my $s = strftime("%Y-%m-%dT%H:%M:%S%z", localtime); $s =~ s/(\d\d)$/:$1/;
-      my $f = $ENV{STATUS_FILE};
-      open(my $o, ">", "$f.tmp") or return;
-      print $o qq({"zustand":"$z","text":"$t","seit":"$s"}\n); close $o;
-      chmod 0644, "$f.tmp"; rename "$f.tmp", $f;
-    }
-    s/\e\][^\a\e]*(?:\a|\e\\)//g; s/\e\[[0-9;?]*[A-Za-z]//g; s/[\r\n]//g;
-    s/^[^[:alnum:]\[]+//;  # Rahmen-/Spinnerzeichen am Anfang
-    next unless length;
-    if (/^Connected\b/) { zustand("ok", "Verbunden") }
-    elsif (/^(?:Reconnecting|Disconnected|Offline)\b/i || (/^Connecting\b/ && ($akt // "") eq "ok")) {
-      zustand("verbindung", "Verbindung unterbrochen – verbindet neu") }
-    elsif (/must be logged in|requires a claude\.ai subscription/) {
-      zustand("login", "Login ungueltig oder abgelaufen – bitte neu anmelden") }
-    my $k = /^Capacity:/ ? "cap" : /Connected|Connecting|Reconnect|Disconnected|offline/ ? "status" : "";
-    if ($k) { next if ($last{$k} // "") eq $_; $last{$k} = $_ }
-    else    { next if $seen{$_}++; %seen = ($_ => 1) if keys %seen > 500 }
-    my @t = localtime; printf "[%04d-%02d-%02d %02d:%02d:%02d] [%s] rc: %s\n",
-      $t[5] + 1900, $t[4] + 1, @t[3, 2, 1, 0], $ENV{ROLE}, $_;'
-}
+# Ausgabe von 'claude remote-control' fuers Add-on-Log, gefiltert (Statusanzeige wird staendig neu
+# gezeichnet). Fuehrt dabei den Zustand fuer Login-Seite und HA nach (ok/verbindung/startet/login),
+# Regeln und Begruendung in rc-log.pl.
+rc_log() { ROLE="$ROLE" STATUS_FILE="$STATUS_FILE" perl /usr/local/lib/rc-log.pl; }
 
 hinweis_gezeigt=0
 fast_fails=0
