@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.1.4
+- **Fix Zustand nach Neuverbinden:** Nach einem automatischen Wiederaufbau der Remote-Control-
+  Verbindung blieb `/status` auf `verbindung`, bis die naechste Unterhaltung begann (Fehlalarm in HA).
+  „Reconnected after …“ (auch mit Zeitstempel „[hh:mm:ss] “ davor) setzt jetzt `ok`, `seit` =
+  Zeitpunkt des Wiederaufbaus
+- Zustand robuster aus der Anzeige der CLI abgeleitet: Die Statuszeile im Leerlauf
+  („Ready · …“) und die Kapazitaetszeile (zeichnet die CLI nur bei stehender Verbindung) gelten
+  ebenfalls als `ok`; bisher zaehlte nur „Connected · …“, das die CLI erst mit einer Sitzung zeigt.
+  Sitzungstitel, die mit „Ready“/„Connected“ beginnen, zaehlen nicht. Die wiederhergestellte
+  Statuszeile erscheint auch wieder im Log
+- „Connecting“ (Spinner, nur beim Start) nach kurz aufblitzender Statuszeile setzt `startet`
+  („Verbindet …“) statt `verbindung` – es ist der Start, keine Unterbrechung. `login` und alle
+  Zustaende aus `run.sh` unveraendert
+- Auswertung aus `run.sh` nach `/usr/local/lib/rc-log.pl` verschoben (gemeinsame Datei) und mit
+  Tests (`claude_hausmeister/tests/rc-log.test.mjs`). Nicht sicherheitsrelevant: gleicher
+  Prozess, gleiche Rechte, keine neue Faehigkeit fuer den Agenten
+
 ## 0.1.3
 - **Zustand fuer Home Assistant:** Status-Endpunkt `http://<hostname>:7682/status` (JSON:
   `zustand`, `text`, `seit`) fuer einen REST-Sensor; eine HA-Automation meldet Stoerungen aufs

@@ -297,7 +297,8 @@ Meldung aufs Handy, wenn ein Agent ausfaellt. Verworfen: Push aus dem Add-on (Ar
 braeuchten `homeassistant_api`, also HA-Admin, fuer eine Statusmeldung), Log-Auswertung in HA (keine
 Entitaet, nur ueber den Supervisor), regelmaessige Pruefung durch Claude in VS Code (laeuft nicht dauernd).
 Gewaehlt: HA fragt ab (Pull). `run.sh` schreibt `/run/agent-status` (JSON, root), `rc_log` fuehrt
-ihn aus der Remote-Control-Ausgabe nach (`Connected · …` = ok). `login.mjs` liefert ihn auf Port 7682
+ihn aus der Remote-Control-Ausgabe nach (`rc-log.pl`: Statuszeile `Ready`/`Connected · …`, Kapazitaetszeile
+oder `Reconnected after …` = ok, `Reconnecting` = verbindung). `login.mjs` liefert ihn auf Port 7682
 (nur `GET /status`), ein REST-Sensor in HA liest ihn, eine Automation meldet nach 10 Minuten.
 
 | Risiko | Gegenmassnahme |

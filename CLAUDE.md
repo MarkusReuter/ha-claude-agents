@@ -19,7 +19,7 @@ Home-Assistant-Add-on-Repository fuer private Claude-Code-Agenten
 - Sicherheitsrelevante Aenderungen (managed-settings.json, managed-mcp.json, firewall.sh,
   agent-common.sh, config.yaml-Rechte, Rechte im Workspace) immer begruenden.
 - Updates: `version` in `config.yaml` hochzaehlen + CHANGELOG, sonst baut der Supervisor nicht neu.
-- Gemeinsame Dateien (run.sh, agent-common.sh, agent-setup, agent-shell, firewall*.sh) nur in
+- Gemeinsame Dateien (run.sh, agent-common.sh, rc-log.pl, agent-setup, agent-shell, firewall*.sh) nur in
   `claude_hausmeister/` aendern, dann `tools/check-common.sh --sync`; alle betroffenen Add-ons hochzaehlen.
   Rollenspezifisches gehoert nach `rootfs/opt/agent/role.env` und `role.sh`.
 - Tests MCP-Server und GitHub-Proxy: `node --test claude_archivar/tests/*.test.mjs claude_hausmeister/tests/*.test.mjs claude_architekt/tests/*.test.mjs`

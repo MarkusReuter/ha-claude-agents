@@ -11,6 +11,7 @@ REF=claude_hausmeister
 COMMON=(
   rootfs/run.sh
   rootfs/usr/local/lib/agent-common.sh
+  rootfs/usr/local/lib/rc-log.pl
   rootfs/usr/local/bin/agent-setup
   rootfs/usr/local/bin/agent-shell
   rootfs/usr/local/bin/firewall.sh
